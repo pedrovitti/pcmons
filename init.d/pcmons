@@ -1,0 +1,118 @@
+#!/bin/bash
+######################################################################
+# Provides:          pcmons
+# Required-Start:    $remote_fs $syslog
+# Required-Stop:     $remote_fs $syslog
+# Default-Start:     2 3 4 5
+# Default-Stop:      0 1 6
+# Short-Description: Checks if pcmons is running. If not, starts it.
+#######################################################################
+
+# Variables Initialization
+PCMONS_PATH=/home/vitti/Documents/LRG/pcmons/
+NAGIOS_INIT_PATH=/etc/init.d/nagios
+
+######################################################
+# start() function
+#
+# TODO: Test if commands like echo e nohup exist	
+# Description: Check all scripts are in place
+# Test if the plugins are running in each node of the eucalyptus cloud NECESSARY? 
+# I believe that would be better put this test on direct on 
+# therunning_vms/cluster/VM_Monitoring_Cluster_Plugin.py
+# Start running_vms/cluster/VM_Monitoring_Cluster_Plugin.py
+# Check if Nagios is running
+# Start running_vms/Notification_Server.py 
+#######################################################
+start() {
+	echo -e "Starting PCMONS... \n"
+        
+	# Code here to start the program and check it's OK
+    	if [ -d $PCMONS_PATH ] && 							#Check if pcmons directory exists
+	   [ -e ${PCMONS_PATH}running_vms/cluster/VM_Monitoring_Cluster_Plugin.py ] &&  #Check if pcmons files exists
+  	   [ -e ${PCMONS_PATH}interface/nagios/Nagios_Passive_Server.py ] && 		#Check if pcmons files exists
+	   [ -e ${PCMONS_PATH}running_vms/Notification_Server.py ]; 			#Check if pcmons files exists
+	then
+	   nohup python $PCMONS_PATH'running_vms/cluster/VM_Monitoring_Cluster_Plugin.py'  & # Starts pcmons
+	   NAGIOS=`$NAGIOS_INIT_PATH status | grep -i running`
+		if [ -z "$NAGIOS" ]; then
+			#nohup python $PCMONS_PATH'interface/nagios/NagiosPassiveServer.py' &
+			nohup python $PCMONS_PATH'running_vms/Notification_Server.py'   &
+		else
+			echo -e "Nagios is not running, PCMONS won't work properly \n Exiting"	
+		fi
+	else
+		echo -e "Required files not found. Verify the installation.\n"
+		exit 0
+	fi
+	echo "Done"
+	return 0
+
+}
+
+########################################
+# stop() function
+# Description: Get the PID of each 
+#              service and kill then
+# TODO: kill multiple instances
+########################################
+stop() {
+	echo -e "Stopping PCMONS...\n "
+	
+	VM_MONITORING_CLUSTER_PLUGIN=`ps -ef|egrep -i "vm_monitoring_cluster_plugin" |grep -v grep |awk '{print $2}'`
+	NOTIFICATION_SERVER=`ps -ef|egrep -i "notification_server.py" |grep -v grep |awk '{print $2}'`
+	
+	if [ ! -z $NOTIFICATION_SERVER ]; then
+        	kill $NOTIFICATION_SERVER
+	fi
+
+	if [ ! -z $VM_MONITORING_CLUSTER_PLUGIN ]; then
+        	kill $VM_MONITORING_CLUSTER_PLUGIN
+    	fi
+    
+	echo "OK"
+	return 0
+}
+
+
+
+########################################
+# status() function
+# Description: Check the status of pcmons 
+########################################
+status() {
+	VM_MONITORING_CLUSTER_PLUGIN=`PCMONS_`
+	NOTIFICATION_SERVER=`ps -ef|egrep -i "notification_server.py" |grep -v grep |awk '{print $2}'`
+        
+#	VM_MONITORING_CLUSTER_PLUGIN=`ps -ef|egrep -i "vm_monitoring_cluster_plugin" |grep -v grep |awk '{print $2}'`
+#	NOTIFICATION_SERVER=`ps -ef|egrep -i "notification_server.py" |grep -v grep |awk '{print $2}'`
+	if [ ! -z $VM_MONITORING_CLUSTER_PLUGIN ]; then
+		if [ ! -z $NOTIFICATION_SERVER ] ; then
+			echo "All running"	
+		else
+			echo -e "NOTIFICATION_SERVER not running\n"
+		fi
+	else
+		echo -e "VM_MONITORING_CLUSTER_PLUGIN not running\n"
+	fi
+        return 0
+}
+
+case "$1" in
+  start)
+        start
+        ;;
+  stop)
+        stop
+        ;;
+  status)
+        status
+        ;;
+  restart)
+        stop
+        start
+        ;;
+  *)
+        echo $"Usage: $0 {start|stop|status|restart}"
+        exit 1
+esac

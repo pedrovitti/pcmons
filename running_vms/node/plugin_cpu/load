@@ -1,0 +1,15 @@
+#!/usr/bin/env python
+
+import os,sys
+
+(d1, d2, d3) = os.getloadavg()
+
+if d1 >= 3.0:
+    print "CRITICAL - load average: %.2f, %.2f, %.2f" % (d1,d2,d3)
+    sys.exit(2)
+elif d1 >= 1.5:
+    print "WARNING - load average: %.2f, %.2f, %.2f" % (d1,d2,d3)
+    sys.exit(1)
+else:
+    print "OK - load average: %.2f, %.2f, %.2f" % (d1,d2,d3)
+    sys.exit(0)

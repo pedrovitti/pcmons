@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<basic_monitoring>
+<services>
+    <service> 
+        <service_description> RAM </service_description>
+        <max_check_attempts> 4</max_check_attempts>
+        <contact_groups> admins </contact_groups>
+        <notification_options>w,u,c,r,n </notification_options>
+        <notification_interval> 60 </notification_interval>
+        <notification_period> 24x7</notification_period>
+        <check_command>check_dummy!2</check_command>
+        <active_checks_enabled>0 </active_checks_enabled>
+        <passive_checks_enabled>1 </passive_checks_enabled>
+    </service>
+    <service>
+        <service_description> HTTP_CONNECTIONS </service_description>
+        <max_check_attempts> 4</max_check_attempts>
+        <contact_groups> admins </contact_groups>
+        <notification_options>w,u,c,r,n </notification_options>
+        <notification_interval> 60 </notification_interval>
+        <notification_period> 24x7</notification_period>
+        <check_command>check_dummy!2</check_command>
+        <active_checks_enabled>0 </active_checks_enabled>
+        <passive_checks_enabled>1 </passive_checks_enabled>
+    </service>
+    <service>
+        <service_description> LOAD </service_description>
+        <max_check_attempts> 4</max_check_attempts>
+        <contact_groups> admins </contact_groups>
+        <notification_options>w,u,c,r,n </notification_options>
+        <notification_interval> 60 </notification_interval>
+        <notification_period> 24x7</notification_period>
+        <check_command>check_dummy!2</check_command>
+        <active_checks_enabled>0 </active_checks_enabled>
+        <passive_checks_enabled>1 </passive_checks_enabled>
+    </service>
+    <service>
+        <service_description> SSH </service_description>
+        <max_check_attempts> 4</max_check_attempts>
+        <contact_groups> admins </contact_groups>
+        <notification_options>w,u,c,r,n </notification_options>
+        <notification_interval> 60 </notification_interval>
+        <notification_period> 24x7</notification_period>
+        <check_command>check_ssh</check_command>
+        <active_checks_enabled>1 </active_checks_enabled>
+    </service>
+    <service>
+        <service_description> PING </service_description>
+        <max_check_attempts> 4</max_check_attempts>
+        <contact_groups> admins </contact_groups>
+        <notification_options>w,u,c,r,n </notification_options>
+        <notification_interval> 60 </notification_interval>
+        <notification_period> 24x7</notification_period>
+        <check_command>check_ping!100.0,20%!500.0,60%</check_command>
+        <active_checks_enabled>1 </active_checks_enabled>
+    </service>
+</services>
+</basic_monitoring>

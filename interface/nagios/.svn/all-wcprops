@@ -1,0 +1,23 @@
+K 25
+svn:wc:ra_dav:version-url
+V 39
+/svn/!svn/ver/20/trunk/interface/nagios
+END
+__init__.py
+K 25
+svn:wc:ra_dav:version-url
+V 51
+/svn/!svn/ver/13/trunk/interface/nagios/__init__.py
+END
+NagiosPassiveServer.py
+K 25
+svn:wc:ra_dav:version-url
+V 62
+/svn/!svn/ver/15/trunk/interface/nagios/NagiosPassiveServer.py
+END
+send_passive_check_nagios.sh
+K 25
+svn:wc:ra_dav:version-url
+V 68
+/svn/!svn/ver/15/trunk/interface/nagios/send_passive_check_nagios.sh
+END
