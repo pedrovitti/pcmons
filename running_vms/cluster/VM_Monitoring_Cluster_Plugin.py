@@ -63,8 +63,9 @@ class VM_Monitoring_Cluster_Plugin:
                     'ramdisk':x.ramdisk,
                     'state':x.state,
                 }
-            vms.append(vm)
+                vms.append(vm) #one reservation for each instance? (bug?) (fixed)
         return vms
+
 
     def grepNodes(self, infra=cluster_config.INFRA, file=cluster_config.PATH_TO_EUCALYPTUS_CONFIG_FILE, pattern="NODES"):
         '''
