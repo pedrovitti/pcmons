@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 from Mysql_Db_Connector import Db_Connector
 import logging
 import time
@@ -5,13 +6,16 @@ import xmlrpclib
 from socket import error as socket_error
 import boto.ec2.regioninfo
 import boto
-import cluster_config, vms
+import cluster_config
+import vms
+import sys
+import commands, subprocess
+import socket
 
 class VM_Monitoring_Cluster_Plugin:
     """
     Class to controll all the process of getting info from the IaaS provider and each of its nodes. Currently it supports eucalyptus and opennebula.
     """
-
     def __init__(self):
         self.db = Db_Connector()
        	# Using boto ec2 library to get info about running vms in an EC2 compatible environment
@@ -22,11 +26,7 @@ class VM_Monitoring_Cluster_Plugin:
                               region=region,
                               port=cluster_config.EC2_INTERFACE_PORT_ON_CLOUD_CONTROLLER,
                               path=cluster_config.PATH_TO_EC2_SERVICE)
-        if cluster_config.INFRA = 'eucalyptus':
-	    print '(pedrovitti) DEBUG: INFRA = eucalyptus' 
-        else:
-	    print '(pedrovitti) DEBUG: INFRA = opennebula'
-	self.nodes = grepNodes()
+	self.nodes = self.grepNodes()
         #Set up logging
         logging.basicConfig(level=logging.DEBUG, format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s', datefmt='%m-%d %H:%M', filename=cluster_config.PATH_TO_LOG_FILE)
 
@@ -64,8 +64,8 @@ class VM_Monitoring_Cluster_Plugin:
                     'state':x.state,
                 }
                 vms.append(vm) #one reservation for each instance? (bug?) (fixed)
+		print vms
         return vms
-
 
     def grepNodes(self, infra=cluster_config.INFRA, file=cluster_config.PATH_TO_EUCALYPTUS_CONFIG_FILE, pattern="NODES"):
         '''
@@ -79,24 +79,19 @@ class VM_Monitoring_Cluster_Plugin:
                     Nodes = Nodes + line
                     Nodes = Nodes.split('\"')
                     NC = Nodes[1].split()
-		    #Return the IPs of each eucalyptus node
-                    #e.g.: ['150.162.63.25', '150.162.63.33']
                     return NC
-                
+
         elif infra == 'opennebula':
-            get_names = commands.getoutput("onehost list | grep '  on' | awk {' print $2 '}").split("\n")
+            get_names = commands.getoutput("/srv/cloud/one/bin/onehost list | grep '  on' | awk {' print $2 '}").split("\n")
+	    print get_names
             Nodes = []
-            for i in range(len(get_names)):      
+            for i in range(len(get_names)):
                 addr = socket.gethostbyname(get_names[i])
                 Nodes.append(addr)
-	    #Return the IPs of each opennebula node
-            #e.g.: ['150.162.63.25', '150.162.63.33']
             return Nodes
-	   
-	#Implement here to return the IPs of each node for your favorite IaaS
-        #e.g.: openStack, Nimbus, etc.
-	else:
-	    return 'not implemented yet'
+
+        else:
+            return 'not implemented yet'
 
 
     def get_vm_list_running_on_node(self, node):
@@ -107,7 +102,7 @@ class VM_Monitoring_Cluster_Plugin:
         try:
             logging.debug('Connecting to node %s'%node)
             node_server = xmlrpclib.ServerProxy('http://'+node+':'+cluster_config.PORT_PLUGINS_ON_NODES)
-            vms = node_server.get_vms(cluster_config.INFRA) #cluster_config.INFRA - 'eucalyptus'
+            vms = node_server.get_vms('eucalyptus') #cluster_config.INFRA - 'eucalyptus'
         except (socket_error, xmlrpclib.Fault, xmlrpclib.ProtocolError, xmlrpclib.ResponseError), error_code:
             logging.error('Err: (%s)'%error_code)
         return vms
@@ -194,11 +189,6 @@ class VM_Monitoring_Cluster_Plugin:
         if len (terminated_list) > 0:
             for terminated_vm_id in terminated_list:
                 self.db.set_status_terminated(terminated_vm_id)
-
-        
-
-
-
 
 if __name__ == "__main__":
     controller = VM_Monitoring_Cluster_Plugin()
