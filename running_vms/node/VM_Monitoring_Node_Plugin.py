@@ -49,7 +49,7 @@ class VM_Monitoring_Node_Plugin:
         vms_running_host = commands.getoutput("virsh list | cut -c5-14")
         vms_running_host  = vms_running_host.split()[3:]
         for vm in vms_running_host:
-            vm = {'node_hostname':hostname,'instance_id':vm,}
+            vm = {'node_hostname':hostname,'instance_id':vm.replace('one','i'),}
             vms.append(vm)
         if len(vms) > 0:
             logging.debug("Vms returned :%s"%vms)
