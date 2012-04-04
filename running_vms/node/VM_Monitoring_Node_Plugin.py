@@ -10,11 +10,12 @@ class VM_Monitoring_Node_Plugin:
     """
     def __init__(self):
         logging.basicConfig(level=logging.DEBUG, format = '%(asctime)s %(name)-12s %(levelname)-8s %(message)s', datefmt='%m-%d %H:%M', filename=node_config.PATH_TO_LOG_FILE)
+	print "Initializing Node Plugin.."
         server = SimpleXMLRPCServer((node_config.LISTEN_IP, node_config.LISTEN_PORT), logRequests=True)
         server.register_function(self.do_default)
         server.register_function(self.get_vms)
         server.register_function(self.get_monitoring_data)
-        try:
+	try:
             server.serve_forever()
         except:
             e = sys.exec_info()[1]
@@ -47,7 +48,7 @@ class VM_Monitoring_Node_Plugin:
         vms = [ ]
         vm = { }
         vms_running_host = commands.getoutput("virsh list | cut -c5-14")
-        vms_running_host  = vms_running_host.split()[3:]
+        vms_running_host = vms_running_host.split()[3:]
         for vm in vms_running_host:
             vm = {'node_hostname':hostname,'instance_id':vm.replace('one','i'),}
             vms.append(vm)
