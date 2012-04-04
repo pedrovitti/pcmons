@@ -32,10 +32,11 @@ class VM_Monitoring_Cluster_Plugin:
 
         while True:
             vms = self.get_running_vms()
-            self.mark_terminated_vms(vms)
+            #self.mark_terminated_vms(vms)
             self.store_vms_info(vms)
+	    self.mark_terminated_vms(vms)
             # Checks if any running vm has missing information (node placement, for example)
-            self.update_vms_info()
+            self.update_vms_info() 
             time.sleep(60)
 
 
@@ -64,7 +65,6 @@ class VM_Monitoring_Cluster_Plugin:
                     'state':x.state,
                 }
                 vms.append(vm) #one reservation for each instance? (bug?) (fixed)
-		print vms
         return vms
 
     def grepNodes(self, infra=cluster_config.INFRA, file=cluster_config.PATH_TO_EUCALYPTUS_CONFIG_FILE, pattern="NODES"):
@@ -82,8 +82,8 @@ class VM_Monitoring_Cluster_Plugin:
                     return NC
 
         elif infra == 'opennebula':
-            get_names = commands.getoutput("/srv/cloud/one/bin/onehost list | grep '  on' | awk {' print $2 '}").split("\n")
-	    print get_names
+	    command = cluster_config.PATH_TO_OPENNEBULA + "/bin/onehost list | grep '  on' | awk {' print $2 '}"
+            get_names = commands.getoutput(command).split("\n")
             Nodes = []
             for i in range(len(get_names)):
                 addr = socket.gethostbyname(get_names[i])
@@ -102,7 +102,7 @@ class VM_Monitoring_Cluster_Plugin:
         try:
             logging.debug('Connecting to node %s'%node)
             node_server = xmlrpclib.ServerProxy('http://'+node+':'+cluster_config.PORT_PLUGINS_ON_NODES)
-            vms = node_server.get_vms('eucalyptus') #cluster_config.INFRA - 'eucalyptus'
+            vms = node_server.get_vms('opennebula') #cluster_config.INFRA - 'eucalyptus'
         except (socket_error, xmlrpclib.Fault, xmlrpclib.ProtocolError, xmlrpclib.ResponseError), error_code:
             logging.error('Err: (%s)'%error_code)
         return vms
@@ -126,8 +126,16 @@ class VM_Monitoring_Cluster_Plugin:
         '''
         print 'ok!'
 
-
-
+    def update_opennebula_vms_info(self):
+	'''
+   	    testando metodo
+        '''
+	for node in self.nodes:
+	    vms_on_node = self.get_vm_list_running_on_node(node)
+            if len(vms_on_node) > 0:
+	        for vm_on_node in vms_on_node:
+		    self.db.update_vm_Ip_hostname(node, hostname=vm_on_node['node_hostname'], instance_id=vm_on_node['instance_id'])
+         
     def update_vms_info(self):
         '''
         checks if there are some missing information about a stored vm and tries to update it by querying the node
@@ -156,9 +164,8 @@ class VM_Monitoring_Cluster_Plugin:
                             print 'empty key value: %s %s'%(row[key], key)
                             for node in self.nodes:
                                 vms_on_node = self.get_vm_list_running_on_node(node)
-                                if len(vms_on_node) > 0:
+				if len(vms_on_node) > 0:
                                     for vm_on_node in vms_on_node:
-                                        print 'vm on node: %s'%vm_on_node
                                         if vm_on_node['instance_id'] == row['instance_id']:
                                             vm.attributes['node_hostname'] = vm_on_node['node_hostname']
                                             vm.attributes['node_ip'] = node
@@ -166,6 +173,8 @@ class VM_Monitoring_Cluster_Plugin:
         if (len(up_vms) > 0):
             for up_vm in up_vms:
                 up_vm.save()
+	if(cluster_config.INFRA == 'opennebula'):
+	    self.update_opennebula_vms_info()
 
     def mark_terminated_vms(self, vms):
         running_vms = self.db.get_info_for_monitoring_running_Vms()

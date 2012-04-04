@@ -21,10 +21,10 @@ class Db_Connector:
         return result
 
     def update_stored_vm_info(self,vm):
-        sql = "UPDATE %s SET last_check=now(), reservation='%s', dns_name='%s', private_dns_name='%s', public_dns_name='%s', state='%s', instance_type='%s', availability_zone='%s' WHERE instance_id='%s'"%(cluster_config.VM_TABLE, vm['reservation'], vm['dns_name'], vm['private_dns_name'], vm['public_dns_name'], vm['state'], vm['instance_type'], vm['availability_zone'], vm['instance_id'])
+	sql = "UPDATE %s SET last_check=now(), reservation='%s', dns_name='%s', private_dns_name='%s', public_dns_name='%s', state='%s', instance_type='%s', availability_zone='%s' WHERE instance_id='%s'"%(cluster_config.VM_TABLE, vm['reservation'], vm['dns_name'], vm['private_dns_name'], vm['public_dns_name'], vm['state'], vm['instance_type'], vm['availability_zone'], vm['instance_id'])
         result = self.cur.execute(sql)
         if result == 1:
-            logging.debug('vm %s updated'%vm)
+	    logging.debug('vm %s updated'%vm)
         else:
             logging.debug('vm %s was not updated'%vm)
         return result
@@ -44,7 +44,7 @@ class Db_Connector:
         return ids
 
     def update_vm_Ip_hostname(self,ip, hostname, instance_id):
-        sql = "UPDATE %s set node_ip='%s', node_hostname='%s' WHERE instance_id='%s'"%(cluster_config.VM_TABLE,ip, hostname,instance_id)
+	sql = "UPDATE %s set node_ip='%s', node_hostname='%s' WHERE instance_id='%s'"%(cluster_config.VM_TABLE,ip, hostname,instance_id)
         result = self.cur.execute(sql)
         if result == 1:
             logging.debug('vm %s from node %s updated'%(instance_id, ip))
@@ -85,7 +85,7 @@ class Db_Connector:
         str = " "
         for key, value in vm_info.iteritems():
             str = "%s %s = '%s', "%(str, key,value)
-        sql_update = "UPDATE vmmonitor_vm set %s WHERE instance_id='%s'"%(str[:-2], vm_info['instance_id'])
+	sql_update = "UPDATE vmmonitor_vm set %s WHERE instance_id='%s'"%(str[:-2], vm_info['instance_id'])
         
         result = self.cur.execute(sql_update)
         if result == 1:
