@@ -6,6 +6,10 @@ from SSHAccessMonitor import SSHAccessMonitor
 from AvailabilityMonitor import AvailabilityMonitor
 from BackupMonitor import BackupMonitor
 from EncryptionMonitor import EncryptionMonitor
+from IntegrityMonitor import IntegrityMonitor
+from MalwareMonitor import MalwareMonitor
+from PasswordMonitor import PasswordMonitor
+from VulnerabilityMonitor import VulnerabilityMonitor
 
 import logging, time, xmlrpclib, datetime
 from socket import error as socket_error
@@ -21,7 +25,10 @@ class Monitor:
         self.availabilityMonitor = AvailabilityMonitor()
         self.backupMonitor = BackupMonitor()
         self.encryptionMonitor = EncryptionMonitor()
-
+        self.integrityMonitor = IntegrityMonitor()
+        self.malwareMonitor = MalwareMonitor()
+        self.passwordMonitor = PasswordMonitor()
+        self.vulnerabilityMonitor = VulnerabilityMonitor()
 
         while True:
             now = datetime.datetime.now()
@@ -40,6 +47,10 @@ class Monitor:
         data['availabity'] = self.availabilityMonitor.get_availability_info()
         data['backup'] = self.backupMonitor.get_backup_info()
         data['encryption'] = self.encryptionMonitor.get_encryption_info()
+        data['integrity'] = self.integrityMonitor.get_integrity_info()
+        data['malware'] = self.malwareMonitor.get_malware_info()
+        data['password'] = self.passwordMonitor.get_password_security()
+        data['vulnerability'] = self.vulnerabilityMonitor.get_vulnerability_info()
 
         return data
 
