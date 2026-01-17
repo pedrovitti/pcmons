@@ -18,7 +18,7 @@ class VM_Monitoring_Node_Plugin:
 	try:
             server.serve_forever()
         except:
-            e = sys.exec_info()[1]
+            e = sys.exc_info()[1]
             logging.error("server execution error: %s"%e)
 
     def eucalyptus(self):
