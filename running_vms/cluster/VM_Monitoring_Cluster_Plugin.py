@@ -82,7 +82,7 @@ class VM_Monitoring_Cluster_Plugin:
                     return NC
 
         elif infra == 'opennebula':
-	    command = cluster_config.PATH_TO_OPENNEBULA + "/bin/onehost list | grep '  on' | awk {' print $2 '}"
+            command = cluster_config.PATH_TO_OPENNEBULA + "/bin/onehost list | grep '  on' | awk {' print $2 '}"
             get_names = commands.getoutput(command).split("\n")
             Nodes = []
             for i in range(len(get_names)):
