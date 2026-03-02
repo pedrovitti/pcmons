@@ -1,1 +1,13 @@
 *.*~
+
+# Python
+*.pyc
+*.pyo
+__pycache__/
+
+# Editors / OS
+*.swp
+.DS_Store
+
+# Legacy VCS metadata
+.svn/
