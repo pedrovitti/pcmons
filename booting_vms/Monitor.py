@@ -35,7 +35,7 @@ class Monitor:
             ('loadavg', self.systemLoadMonitor.get_loadavg),
             ('http', self.httpMonitor.get_http_connections),
             ('sshattempts', self.sshAccessMonitor.get_ssh_access_attempts),
-            ('availabity', self.availabilityMonitor.get_availability_info),
+            ('availability', self.availabilityMonitor.get_availability_info),
             ('backup', self.backupMonitor.get_backup_info),
             ('encryption', self.encryptionMonitor.get_encryption_info),
         )
