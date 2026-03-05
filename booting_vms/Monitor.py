@@ -30,16 +30,24 @@ class Monitor:
             time.sleep(300) # 5 minutes for now
 
     def get_monitoring_data(self):
-        data = {}
-        #data.append(self.memoryMonitor.get_memory_usage())
-        data['memory']= self.memoryMonitor.get_meminfo()
-        data['loadavg'] = self.systemLoadMonitor.get_loadavg()
-        data['http'] = self.httpMonitor.get_http_connections()
-        data['sshattempts'] = self.sshAccessMonitor.get_ssh_access_attempts()
-        data['availabity'] = self.availabilityMonitor.get_availability_info()
-        data['backup'] = self.backupMonitor.get_backup_info()
-        data['encryption'] = self.encryptionMonitor.get_encryption_info()
+        probes = (
+            ('memory', self.memoryMonitor.get_meminfo),
+            ('loadavg', self.systemLoadMonitor.get_loadavg),
+            ('http', self.httpMonitor.get_http_connections),
+            ('sshattempts', self.sshAccessMonitor.get_ssh_access_attempts),
+            ('availabity', self.availabilityMonitor.get_availability_info),
+            ('backup', self.backupMonitor.get_backup_info),
+            ('encryption', self.encryptionMonitor.get_encryption_info),
+        )
 
+        data = {}
+        for name, probe in probes:
+            try:
+                data[name] = probe()
+            except Exception, error:
+                #a probe whose log file or command is missing must not
+                #stop the remaining metrics from being reported
+                logging.error('probe %s failed: %s'%(name, error))
         return data
 
     def send_monitoring_data(self,data):
