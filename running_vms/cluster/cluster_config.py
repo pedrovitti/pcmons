@@ -33,6 +33,8 @@ EC2_INTERFACE_PORT_ON_CLOUD_CONTROLLER = 8773
 #Configurations file of Eucalyptus server, must be accessible by this server
 PATH_TO_EUCALYPTUS_CONFIG_FILE = "/etc/eucalyptus/eucalyptus.conf"
 PATH_TO_OPENNEBULA_CONFIG_FILE = "/srv/cloud/one/etc/oned.conf"
+#OpenNebula installation root, used to locate the onehost command
+PATH_TO_OPENNEBULA = "/srv/cloud/one"
 #Configured port on the clients that respond the currently running vms on each node
 PORT_PLUGINS_ON_NODES = "60000"
 
