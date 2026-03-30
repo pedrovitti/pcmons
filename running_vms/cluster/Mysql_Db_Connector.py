@@ -38,7 +38,7 @@ class Db_Connector:
             logging.debug('vm %s was not inserted'%vm)
         return result
     def get_stored_vms_ids_without_IP(self):
-        sql = "SELECT instance_id FROM " + cluster_config.VM_TABLE + " WHERE node_ip='' or node_ip=NULL"
+        sql = "SELECT instance_id FROM " + cluster_config.VM_TABLE + " WHERE node_ip='' or node_ip IS NULL"
         self.cur.execute(sql)
         ids = self.cur.fetchall()
         return ids
