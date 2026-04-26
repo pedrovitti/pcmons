@@ -5,13 +5,13 @@ Considering the lack of generic and open-source solutions for management and mon
 of private clouds, pcmons (Private Cloud MONitoring System) was developed. It is intended 
 to be an extensible and modular monitoring system for private clouds. pcmons acts 
 principally retrieving, gathering and preparing relevant information for monitoring data 
-visualization and is specially on virtual machines.
+visualization, with a special focus on virtual machines.
 
 Authors:
 
 * Shirlei Chaves (shirlei@inf.ufsc.br)
 * Rafael Uriarte (rafael.uriarte@inf.ufsc.br)
-* Pedro Vitti (pedrovitti@gmail.com.br)
+* Pedro Vitti (pedrovitti@gmail.com)
 
 Site: https://github.com/pedrovitti/pcmons
 
@@ -21,7 +21,7 @@ Prerequisites
 
 
 PCMONS is compatible with Eucalyptus and Opennebula (IaaS platform) and Nagios (used to visualize monitoring data). 
-However, its development considers easily integration with other toolkit or cloud frameworks trough the development 
+However, its development considers easy integration with other toolkits or cloud frameworks through the development 
 of extensions.
 
 **Prerequisites:**
@@ -75,11 +75,11 @@ Installation
 
         $ mysql -u<user_name> -p<password> <my_db_name> < vmmonitor_vm.sql
 
-3. If you are using Eucalyptus, Change add_key.pl file by the one in the third-parties directory. Usually it's locate in /usr/share/eucalyptus folder.
+3. If you are using Eucalyptus, replace the add_key.pl file with the one in the third-parties directory. It is usually located in the /usr/share/eucalyptus folder.
 
 4. Copy all files in the node folder ($PCMONS/running_vms/node/) to the node hosts and run it (python VM_Monitoring_Node_Plugin.py).
 
-5. Run the others files in the cluster/cloud controller host (where Nagios is installed).
+5. Run the other files in the cluster/cloud controller host (where Nagios is installed).
 
 
 Information
