@@ -41,7 +41,7 @@ You can use package manager to install these packages.
 
 **Ubuntu/Debian:**
 
-    $ sudo apt-get install python python-mysqld python-boto mysql-server
+    $ sudo apt-get install python python-mysqldb python-boto mysql-server
     
 
 To install Eucalyptus or OpenNebula and Nagios you can follow the steps at the official documentation according to your GNU/Linux distribution.
