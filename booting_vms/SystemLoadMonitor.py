@@ -4,10 +4,8 @@ class SystemLoadMonitor:
     '''
         Class for CPU Usage Monitoring
     '''
-    loadavg = {'1':0.00, '5':0.00, '10':0.00}
-
-   # def __init__(self):
-    #$    self.get_cpu_usage()   
+    def __init__(self):
+        self.loadavg = {'1':0.00, '5':0.00, '10':0.00}
 
     def get_loadavg(self):
 

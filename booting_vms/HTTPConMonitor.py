@@ -4,10 +4,9 @@ class HTTPConMonitor:
     '''
         Class for HTTP  Connections Monitoring
     '''
-    http_connections = {'nconexoes':0}
-
     def __init__(self):
         self.server = '150.162.63.25'
+        self.http_connections = {'nconexoes':0}
 
     def get_http_connections(self):
     	#cmd = 'ps aux |  awk "{ print $1 }" | egrep "httpd|apache" | wc -l'
