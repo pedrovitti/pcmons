@@ -3,7 +3,6 @@ class SSHAccessMonitor:
     Class for SSH Access Attempts Monitoring
     '''
     def __init__(self):
-        self.server = '150.162.63.32'
         self.access_attempts = {'valid':0, 'invalid':0}
 
     def get_ssh_access_attempts(self):
