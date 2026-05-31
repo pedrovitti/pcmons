@@ -8,6 +8,8 @@ class VM_Monitoring_Node_Plugin:
     """
     Class starts a XMLRPC server that answer the current running vms on this node
     """
+    SUPPORTED_INFRA = ('eucalyptus', 'opennebula')
+
     def __init__(self):
         logging.basicConfig(level=logging.DEBUG, format = '%(asctime)s %(name)-12s %(levelname)-8s %(message)s', datefmt='%m-%d %H:%M', filename=node_config.PATH_TO_LOG_FILE)
 	print "Initializing Node Plugin.."
@@ -59,22 +61,17 @@ class VM_Monitoring_Node_Plugin:
         return self.list_running_vms(lambda domain: domain.replace('one','i'))
 
     def do_default(self):
-        msg = 'Please, provide one of the following values:'
-        for value in values:
-            msg = msg + value
-        return msg
+        return 'Please, provide one of the following values: %s'%(', '.join(self.SUPPORTED_INFRA))
 
 
     def get_vms(self, infra = 'eucalyptus'):
         logging.debug('Parameter provided: %s'%infra)
-        #values = {'eucalyptus': self.eucalyptus,'opennebula': self.opennebula,}
         if infra == 'eucalyptus':
             return self.eucalyptus()
         elif infra == 'opennebula':
             return self.opennebula()
-	else:
-	    return 'not implemented yet'
-        #return values.get(infra, self.do_default)
+        else:
+            return self.do_default()
 
     def get_monitoring_data(self,data):
         logging.debug('monitoring data: %s'%data)
