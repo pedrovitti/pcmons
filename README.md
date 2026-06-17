@@ -103,6 +103,31 @@ Installation
 5. Run the other files in the cluster/cloud controller host (where Nagios is installed).
 
 
+Running the components
+--------
+
+
+Three long-running processes, plus the agent that travels inside the monitored VMs.
+`Notification_Server.py` and `NagiosPassiveServer.py` add `/opt/pcmons/` to `sys.path`, so
+the tree is expected to be installed there on the controller.
+
+On the cluster/cloud controller host:
+
+    $ python running_vms/cluster/VM_Monitoring_Cluster_Plugin.py   # polls the IaaS platform every 60s
+    $ python running_vms/Notification_Server.py                    # receives the agents' readings
+
+On each node host:
+
+    $ python running_vms/node/VM_Monitoring_Node_Plugin.py         # reports the VMs running locally
+
+Inside the monitored VMs, `Monitor.py` collects its probes every 5 minutes and pushes them
+to the notification server. It is shipped as a tar bundle that `Startup.sh` unpacks into
+/opt/monitoring at boot. The bundle is build output and is not kept in the repository —
+regenerate it from the current sources before building an image:
+
+    $ ./booting_vms/build_monitoring_bundle.sh
+
+
 Configuration
 --------
 
