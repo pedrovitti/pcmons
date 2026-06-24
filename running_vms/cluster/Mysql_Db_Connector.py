@@ -27,6 +27,7 @@ class Db_Connector:
             logging.debug('vm %s updated'%vm)
         else:
             logging.debug('vm %s was not updated'%vm)
+        self.db.commit()
         return result
 
     def insert_new_vm(self, vm):
@@ -36,6 +37,7 @@ class Db_Connector:
             logging.debug('vm %s inserted in the db'%vm)
         else:
             logging.debug('vm %s was not inserted'%vm)
+        self.db.commit()
         return result
     def get_stored_vms_ids_without_IP(self):
         sql = "SELECT instance_id FROM " + cluster_config.VM_TABLE + " WHERE node_ip='' or node_ip IS NULL"
@@ -50,6 +52,7 @@ class Db_Connector:
             logging.debug('vm %s from node %s updated'%(instance_id, ip))
         else:
             logging.debug('vm %s from node %s was not updated'%(instance_id, ip))
+        self.db.commit()
         return result
     def get_info_for_monitoring_running_Vms(self):
         sql = "SELECT instance_id, user, public_dns_name, node_hostname, node_ip FROM " + cluster_config.VM_TABLE + " WHERE state='running'"
@@ -76,6 +79,7 @@ class Db_Connector:
             logging.debug('vm %s status set to terminated'%(instance_id))
         else:
             logging.debug('vm %s status not set to terminated'%(instance_id))
+        self.db.commit()
         return result
 
 
@@ -95,6 +99,7 @@ class Db_Connector:
             logging.debug('vm %s status updated'%(vm_info['instance_id']))
         else:
             logging.debug('vm %s status not updated'%(vm_info['instance_id']))
+        self.db.commit()
 
     def get_running_vms(self):
         sql = "SELECT * FROM vmmonitor_vm WHERE state!='terminated'"
