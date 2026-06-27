@@ -1,13 +1,10 @@
-import string
 
 class PasswordMonitor:
     '''
     Class for Password Monitoring
     '''
-    password_security = {'max_age':0}
-
     def __init__(self):
-        self.server = '150.162.63.32'
+        self.password_security = {'max_age':0}
 
     def get_password_security(self):
 
