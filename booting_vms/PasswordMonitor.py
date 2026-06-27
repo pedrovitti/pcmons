@@ -16,6 +16,8 @@ class PasswordMonitor:
 
         f = open(log_path, 'r')
 
+        max_age = 0
+
         line = f.readline()
         while line:
             if line.find("#") == -1:
