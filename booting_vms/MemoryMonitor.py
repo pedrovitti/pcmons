@@ -17,23 +17,25 @@ class MemoryMonitor:
         return None
 
     def get_meminfo(self):
+        memory = {'used':0,'free':0,'cache':0,'total':0}
         lines = self.parseSplitFile('/proc/meminfo')
         for line in lines:
             if re.match('MemFree',line[0]):
-                self.memory['free'] = int(line[1])
+                memory['free'] = int(line[1])
             elif re.match('MemTotal', line[0]):
-                self.memory['total'] = int(line[1])
+                memory['total'] = int(line[1])
             elif re.match('Buffer|Cached', line[0]):
-                self.memory['cache'] = int(self.memory['cache']) + int(line[1])
-            else:
-                pass
-        self.memory['used'] = self.memory['total'] - self.memory['free']
+                memory['cache'] = memory['cache'] + int(line[1])
+        memory['used'] = memory['total'] - memory['free']
+        self.memory = memory
         return self.memory
-            
+
     def parseSplitFile(self,filename):
         f = open(filename, "rb")
-        lines = f.readlines()
-        del f
+        try:
+            lines = f.readlines()
+        finally:
+            f.close()
         lines = map(lambda x: x.strip().split(), lines)
         return lines
 
