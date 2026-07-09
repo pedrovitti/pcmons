@@ -4,10 +4,9 @@ class MemoryMonitor:
     '''
         Class for Memory Usage Monitoring
     '''
-    memory = {'used':0,'free':0,'cache':0,'total':0}
-
     def __init__(self):
         self.server = '150.162.63.25'
+        self.memory = {'used':0,'free':0,'cache':0,'total':0}
 
     def get_memory_usage(self):
         cmd = 'free -m | grep ^-'
