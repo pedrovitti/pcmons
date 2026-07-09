@@ -19,6 +19,10 @@ tar -cf monitoring.tar \
     AvailabilityMonitor.py \
     BackupMonitor.py \
     EncryptionMonitor.py \
+    IntegrityMonitor.py \
+    MalwareMonitor.py \
+    PasswordMonitor.py \
+    VulnerabilityMonitor.py \
     settings.py
 
 echo "monitoring.tar rebuilt from the current sources"
