@@ -1,0 +1,6 @@
+#PyMySQL provides a pure-python MySQLdb, so the image needs no compiler or
+#libmysqlclient headers. install_as_MySQLdb() is called by the test harness.
+PyMySQL==0.10.1
+#boto 2 is what VM_Monitoring_Cluster_Plugin.py targets; it is the last release
+#and still supports python 2.
+boto==2.49.0

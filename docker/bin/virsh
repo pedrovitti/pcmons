@@ -1,0 +1,9 @@
+#!/bin/sh
+#Stub standing in for libvirt. Replays the two header lines and a domain list
+#in the layout VM_Monitoring_Node_Plugin.py parses with "cut -c5-14".
+cat <<'OUT'
+ Id    Name                           State
+----------------------------------------------------
+ 1     one-42                         running
+ 2     one-43                         running
+OUT

@@ -1,0 +1,4 @@
+# Password aging controls
+PASS_MAX_DAYS 90
+PASS_MIN_DAYS 0
+PASS_WARN_AGE 7
