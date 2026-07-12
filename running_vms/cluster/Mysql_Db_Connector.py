@@ -1,5 +1,12 @@
 import logging
-import MySQLdb
+try:
+    import MySQLdb
+    import MySQLdb.cursors as mysql_cursors
+except ImportError:
+    #pymysql is a pure python implementation of the same API, so it installs
+    #without a compiler or client headers
+    import pymysql as MySQLdb
+    import pymysql.cursors as mysql_cursors
 import cluster_config
 
 class Db_Connector:
@@ -10,9 +17,10 @@ class Db_Connector:
         self.connect()
 
     def connect(self):
-        self.db = MySQLdb.connect(host=cluster_config.DATABASES['default']['HOST'], port=cluster_config.DATABASES['default']['PORT'], user=cluster_config.DATABASES['default']['USER'],passwd=cluster_config.DATABASES['default']['PASSWORD'], db=cluster_config.DATABASES['default']['NAME'])
-        #self.cur = self.db.cursor()
-        self.cur = self.db.cursor(cursorclass=MySQLdb.cursors.DictCursor)
+        #cursorclass is passed to connect() rather than cursor(): both MySQLdb
+        #and pymysql accept it there, while only MySQLdb accepts it on cursor()
+        self.db = MySQLdb.connect(host=cluster_config.DATABASES['default']['HOST'], port=cluster_config.DATABASES['default']['PORT'], user=cluster_config.DATABASES['default']['USER'],passwd=cluster_config.DATABASES['default']['PASSWORD'], db=cluster_config.DATABASES['default']['NAME'], cursorclass=mysql_cursors.DictCursor)
+        self.cur = self.db.cursor()
 
     def get_vm_info(self, instance_id):
         sql = "SELECT * FROM " + cluster_config.VM_TABLE + " WHERE instance_id=%s"
