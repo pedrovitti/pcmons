@@ -58,7 +58,12 @@ Installation
  
     You can execute the command below at a mysql shell to do that:
 
-        $ CREATE USER 'manager'@'localhost' IDENTIFIED BY 'cloudmanager';
+        mysql> CREATE DATABASE manager;
+        mysql> CREATE USER 'manager'@'localhost' IDENTIFIED BY 'cloudmanager';
+        mysql> GRANT ALL PRIVILEGES ON manager.* TO 'manager'@'localhost';
+
+    The same database name, user and password must be filled in under
+    DATABASES['default'] in cluster_config.py.
 
 2. Create the database and MySQL tables 
 
@@ -68,7 +73,7 @@ Installation
     
     Execute this command and you'll be fine: 
 
-        $ mysql <my_db_name> -u<user_name> -p<password> vmm_monitor_vm.sql
+        $ mysql -u<user_name> -p<password> <my_db_name> < vmmonitor_vm.sql
 
 3. If you are using Eucalyptus, Change add_key.pl file by the one in the third-parties directory. Usually it's locate in /usr/share/eucalyptus folder.
 
