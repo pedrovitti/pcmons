@@ -16,6 +16,27 @@ Authors:
 Site: https://github.com/pedrovitti/pcmons
 
 
+Repository layout
+--------
+
+    booting_vms/      agent that ships inside the monitored VM (Monitor.py polls the
+                      probe classes and pushes the readings over XML-RPC)
+    running_vms/
+      cluster/        cluster controller: queries the IaaS platform through the EC2
+                      API, keeps the vmmonitor_vm table in sync, talks to the nodes
+      node/           XML-RPC plugin that runs on each node host and reports the
+                      VMs currently running there
+      Notification_Server.py  receives the agent notifications and hands them to the
+                      configured interface
+    interface/nagios/ turns monitoring data into Nagios passive checks and generates
+                      the Nagios configuration for the monitored VMs
+    third-parties/    Eucalyptus add_key.pl replacement
+    vmmonitor_vm.sql  schema for the VM inventory table
+
+Configuration lives in `running_vms/cluster/cluster_config.py`,
+`running_vms/node/node_config.py` and `booting_vms/settings.py`.
+
+
 Prerequisites
 --------
 
