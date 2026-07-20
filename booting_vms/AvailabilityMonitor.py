@@ -5,7 +5,6 @@ class AvailabilityMonitor:
     Class for Availability Monitoring based on uptime
     '''
     def __init__(self):
-        self.server = '150.162.63.32'
         self.availability = {'uptime':""}
 		
     def get_availability_info(self):	

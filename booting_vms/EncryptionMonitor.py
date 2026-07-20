@@ -3,7 +3,6 @@ class EncryptionMonitor:
     Class for Encryption Monitoring based on dm-crypt
     '''
     def __init__(self):
-        self.server = '150.162.63.32'
         self.encryption = {'is_encrypted':"", 'cipher':""}
 
     def get_encryption_info(self):

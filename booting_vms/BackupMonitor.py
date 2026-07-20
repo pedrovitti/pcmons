@@ -5,7 +5,6 @@ class BackupMonitor:
     Class for Backup Monitoring based on rsync
     '''
     def __init__(self):
-        self.server = '150.162.63.32'
         self.backup = {'last_performed':""}
 	
     def get_backup_info(self):	
