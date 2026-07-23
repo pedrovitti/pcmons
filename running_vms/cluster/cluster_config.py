@@ -1,3 +1,5 @@
+import os
+
 #Configurations used in the Controller.py
 ADMINS = (
      ('Shirlei', 'shirlei@gmail.com'),
@@ -58,11 +60,13 @@ USING_NAGIOSGRAPHER=True
 PATH_SERVICEEXT_NAGIOSGRAPHER='/etc/nagios/serviceext'
 
 #Nagios passive Checks
-#Current ip of the interface listening to requests
-LISTEN_IP = '150.162.63.32'
+#Current ip of the interface listening to requests. Use 0.0.0.0 to listen on
+#every interface, or export PCMONS_LISTEN_IP / PCMONS_LISTEN_PORT to override
+#without editing this file.
+LISTEN_IP = os.environ.get('PCMONS_LISTEN_IP', '150.162.63.32')
 
 #Port where this client will listen to requests
-LISTEN_PORT = 60001
+LISTEN_PORT = int(os.environ.get('PCMONS_LISTEN_PORT', 60001))
 
 INTERFACE="nagios"
 
