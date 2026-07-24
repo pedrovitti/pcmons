@@ -2,14 +2,17 @@ class SSHAccessMonitor:
     '''
     Class for SSH Access Attempts Monitoring
     '''
-    def __init__(self):
+    #LOG_PATH = "/var/log/secure" #CentOS
+    LOG_PATH = "/var/log/auth.log" #Ubuntu
+
+    def __init__(self, log_path=None):
         self.access_attempts = {'valid':0, 'invalid':0}
+        self.log_path = log_path or self.LOG_PATH
 
     def get_ssh_access_attempts(self):
         failed_pattern = "Failed password"
         accepted_pattern = "Accepted password"
-        #log_path = "/var/log/secure" #CentOS
-        log_path = "/var/log/auth.log" #Ubuntu
+        log_path = self.log_path
 
         valid_count = 0
         invalid_count = 0
