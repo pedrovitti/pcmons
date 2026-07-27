@@ -26,7 +26,8 @@ class IntegrityMonitor:
         for line in lines:
             split_line = line.split(pattern)
             if len(split_line) == 2:
-                last_scan = split_line[1]
+                #the pattern is followed by the date and a newline
+                last_scan = split_line[1].strip()
 
         self.integrity['last_performed'] = last_scan
 
