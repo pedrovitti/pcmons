@@ -3,13 +3,16 @@ class IntegrityMonitor:
     '''
     Class for Integrity Monitoring based on tripwire
     '''
-    def __init__(self):
+    #Ubuntu default
+    LOG_PATH = "/var/log/tripwire.log"
+
+    def __init__(self, log_path=None):
         self.integrity = {'last_performed':""}
+        self.log_path = log_path or self.LOG_PATH
 
     def get_integrity_info(self):
 
-        #Ubuntu default
-        log_path = "/var/log/tripwire.log"
+        log_path = self.log_path
 
         f = open(log_path, 'r')
         try:
