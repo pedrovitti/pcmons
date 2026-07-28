@@ -3,13 +3,16 @@ class PasswordMonitor:
     '''
     Class for Password Monitoring
     '''
-    def __init__(self):
+    #Ubuntu default
+    LOGIN_DEFS_PATH = "/etc/login.defs"
+
+    def __init__(self, login_defs_path=None):
         self.password_security = {'max_age':0}
+        self.login_defs_path = login_defs_path or self.LOGIN_DEFS_PATH
 
     def get_password_security(self):
 
-        #Ubuntu default
-        log_path = "/etc/login.defs"
+        log_path = self.login_defs_path
 
         f = open(log_path, 'r')
 
@@ -21,7 +24,10 @@ class PasswordMonitor:
                 if line.find("#") == -1:
                     split = line.split("PASS_MAX_DAYS")
                     if len(split) == 2:
-                        max_age = int(split[1])
+                        try:
+                            max_age = int(split[1])
+                        except ValueError:
+                            pass
 
                 line = f.readline()
 
