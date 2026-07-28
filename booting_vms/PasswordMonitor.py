@@ -24,7 +24,10 @@ class PasswordMonitor:
                 if line.find("#") == -1:
                     split = line.split("PASS_MAX_DAYS")
                     if len(split) == 2:
-                        max_age = int(split[1])
+                        try:
+                            max_age = int(split[1])
+                        except ValueError:
+                            pass
 
                 line = f.readline()
 
