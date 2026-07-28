@@ -12,7 +12,11 @@ class HTTPConMonitor:
         cmd = 'netstat -anp |  grep 8080 | wc -l'
         status, output = commands.getstatusoutput(cmd)
         if status == 0:
-            self.http_connections['nconexoes'] = output
+            #wc prints the count padded on some platforms; the key is a number
+            try:
+                self.http_connections['nconexoes'] = int(output.strip())
+            except ValueError:
+                pass
         return self.http_connections
 
 if __name__=="__main__":
