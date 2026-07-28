@@ -70,7 +70,8 @@ def probe_ssh():
 def probe_availability():
     from AvailabilityMonitor import AvailabilityMonitor
     a = AvailabilityMonitor().get_availability_info()
-    results.append(('up' in a['uptime'], 'availability: uptime parsed', repr(a['uptime'])))
+    #the elapsed time, without the clock or the load average: "1:04", "3 days, 2:11"
+    results.append((':' in a['uptime'], 'availability: uptime parsed', repr(a['uptime'])))
 
 
 def probe_backup():
