@@ -34,7 +34,7 @@ class HTTPConMonitorTest(unittest.TestCase):
 
     def count(self, status, output):
         module.commands = FakeCommands(status, output)
-        return HTTPConMonitor().get_http_connections()['nconexoes']
+        return HTTPConMonitor().get_http_connections()['connections']
 
     def test_reports_the_count(self):
         self.assertEqual(self.count(0, '7\n'), 7)

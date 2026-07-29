@@ -54,8 +54,8 @@ def probe_loadavg():
 def probe_http():
     from HTTPConMonitor import HTTPConMonitor
     h = HTTPConMonitor().get_http_connections()
-    results.append((str(h['nconexoes']).isdigit(), 'http: connection count is numeric',
-                    'nconexoes=%r'%h['nconexoes']))
+    results.append((str(h['connections']).isdigit(), 'http: connection count is numeric',
+                    'connections=%r'%h['connections']))
 
 
 def probe_ssh():
