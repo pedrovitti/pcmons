@@ -54,9 +54,10 @@ class FakeConnection:
 class FakeDb:
     '''Records what the controller asked of the database.'''
 
-    def __init__(self, stored=(), running=()):
+    def __init__(self, stored=(), running=(), rows=()):
         self.stored = list(stored)
         self.running = list(running)
+        self.rows = list(rows)
         self.inserted = []
         self.updated = []
         self.terminated = []
@@ -77,6 +78,22 @@ class FakeDb:
 
     def set_status_terminated(self, instance_id):
         self.terminated.append(instance_id)
+
+    def get_running_vms(self):
+        return self.rows
+
+
+class FakeVM:
+    '''Stands in for vms.VM, recording what was saved rather than writing it.'''
+
+    saved = []
+
+    def __init__(self):
+        self.attributes = dict.fromkeys(
+            ['node_ip', 'node_hostname', 'instance_id', 'state', 'user'])
+
+    def save(self):
+        FakeVM.saved.append(dict(self.attributes))
 
 
 def controller(db=None, connection=None):
@@ -164,6 +181,81 @@ class MarkTerminatedVmsTest(unittest.TestCase):
 
     def test_a_vm_the_db_never_saw_is_not_terminated(self):
         self.assertEqual(self.mark([], [{'instance_id':'i-1', 'state':'running'}]), [])
+
+
+class UpdateVmsInfoTest(unittest.TestCase):
+    '''
+    Fills in what the cloud did not report (the node a VM is running on) by
+    asking each node what it has.
+    '''
+
+    def setUp(self):
+        self.real_vm = module.vms.VM
+        self.real_infra = module.cluster_config.INFRA
+        #eucalyptus takes the plain path; opennebula adds a second pass that
+        #talks to the nodes over XML-RPC
+        module.cluster_config.INFRA = 'eucalyptus'
+        module.vms.VM = FakeVM
+        FakeVM.saved = []
+        logging.disable(logging.DEBUG)
+
+    def tearDown(self):
+        module.vms.VM = self.real_vm
+        module.cluster_config.INFRA = self.real_infra
+        logging.disable(logging.NOTSET)
+
+    def update(self, rows, on_nodes=None):
+        plugin = controller(db=FakeDb(rows=rows))
+        plugin.nodes = sorted(on_nodes or {})
+        plugin.get_vm_list_running_on_node = lambda node: (on_nodes or {}).get(node, [])
+        plugin.update_vms_info()
+        return FakeVM.saved
+
+    def test_a_complete_row_needs_no_update(self):
+        saved = self.update([{'instance_id':'i-1', 'node_ip':'10.0.0.2', 'node_hostname':'node01'}])
+        self.assertEqual(saved, [])
+
+    def test_a_row_missing_its_node_is_filled_in_from_the_node(self):
+        saved = self.update([{'instance_id':'i-1', 'node_ip':'', 'node_hostname':''}],
+                            on_nodes={'10.0.0.2':[{'instance_id':'i-1', 'node_hostname':'node01'}]})
+        self.assertEqual(len(saved), 1)
+        self.assertEqual(saved[0]['node_ip'], '10.0.0.2')
+        self.assertEqual(saved[0]['node_hostname'], 'node01')
+
+    def test_each_row_is_saved_once(self):
+        #the record was built once outside the loop and appended per empty
+        #column, so one incomplete row could be saved several times over
+        saved = self.update([{'instance_id':'i-1', 'node_ip':'', 'node_hostname':''}],
+                            on_nodes={'10.0.0.2':[{'instance_id':'i-1', 'node_hostname':'node01'}]})
+        self.assertEqual(len(saved), 1)
+
+    def test_each_row_is_saved_as_itself(self):
+        #and every save shared one record, so each row was written with the
+        #values of whichever row happened to be processed last
+        saved = self.update([{'instance_id':'i-1', 'node_ip':'', 'node_hostname':''},
+                             {'instance_id':'i-2', 'node_ip':'', 'node_hostname':''}],
+                            on_nodes={'10.0.0.2':[{'instance_id':'i-1', 'node_hostname':'node01'},
+                                                  {'instance_id':'i-2', 'node_hostname':'node02'}]})
+        self.assertEqual(sorted(row['instance_id'] for row in saved), ['i-1', 'i-2'])
+        by_id = dict((row['instance_id'], row['node_hostname']) for row in saved)
+        self.assertEqual(by_id, {'i-1':'node01', 'i-2':'node02'})
+
+    def test_a_vm_no_node_claims_is_saved_as_it_stands(self):
+        saved = self.update([{'instance_id':'i-1', 'node_ip':'', 'node_hostname':''}],
+                            on_nodes={'10.0.0.2':[{'instance_id':'i-9', 'node_hostname':'node01'}]})
+        self.assertEqual(len(saved), 1)
+        #still blank, and specifically not another vm's node
+        self.assertEqual(saved[0]['node_hostname'], '')
+
+    def test_columns_the_record_does_not_have_are_ignored(self):
+        #get_running_vms selects *, so a row carries columns VM knows nothing
+        #about; they must not end up in the update
+        saved = self.update([{'instance_id':'i-1', 'node_ip':'', 'last_check':'2026-08-06'}],
+                            on_nodes={'10.0.0.2':[{'instance_id':'i-1', 'node_hostname':'node01'}]})
+        self.assertNotIn('last_check', saved[0])
+
+    def test_nothing_running_saves_nothing(self):
+        self.assertEqual(self.update([]), [])
 
 
 if __name__ == '__main__':
