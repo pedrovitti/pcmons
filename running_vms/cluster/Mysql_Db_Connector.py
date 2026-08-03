@@ -78,6 +78,10 @@ class Db_Connector:
         sql = "SELECT instance_id FROM " + cluster_config.VM_TABLE + " WHERE public_dns_name=%s AND state='running'"
         self.cur.execute(sql, (ip,))
         vms = self.cur.fetchall()
+        #an address no running vm has is an answer, not an error: returning
+        #vms[0] raised IndexError and took the caller's notification with it
+        if len(vms) == 0:
+            return None
         return vms[0]
 
     def set_status_terminated(self,instance_id):
