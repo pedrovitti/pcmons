@@ -127,14 +127,10 @@ def main():
     #vm's readings against it
     db.cur.execute("UPDATE vmmonitor_vm SET public_dns_name='150.162.63.99' WHERE instance_id='i-102'")
     db.db.commit()
-    try:
-        db.get_id_by_ip('150.162.63.99')
-        results.append((False, 'terminated vm not matched by address', 'returned a row'))
-    except IndexError:
-        #it does not answer, but it raises rather than returning nothing --
-        #get_id_by_ip returns vms[0] on an empty result. Recorded as it stands;
-        #the caller (NagiosPassiveServer) loses the notification either way.
-        results.append((True, 'terminated vm not matched by address', 'raises IndexError'))
+    check('terminated vm not matched by address', db.get_id_by_ip('150.162.63.99'), None)
+
+    #and an address belonging to no vm at all
+    check('unknown address answers with nothing', db.get_id_by_ip('10.9.9.9'), None)
 
     #update_vm_info writes a whole record at once; this is the path vms.VM.save
     #takes, and the only writer that sets node placement and last_check together
