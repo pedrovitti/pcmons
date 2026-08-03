@@ -9,9 +9,13 @@ do its work: everything below operates on self.db and self.connection.
 '''
 import logging
 import os
+import shutil
+import socket
 import sys
+import tempfile
 import types
 import unittest
+import xmlrpclib
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), os.pardir, 'running_vms', 'cluster'))
 
@@ -61,6 +65,7 @@ class FakeDb:
         self.inserted = []
         self.updated = []
         self.terminated = []
+        self.placed = []
 
     def get_vm_info(self, instance_id):
         if instance_id in self.stored:
@@ -79,6 +84,9 @@ class FakeDb:
     def set_status_terminated(self, instance_id):
         self.terminated.append(instance_id)
 
+    def update_vm_Ip_hostname(self, ip, hostname, instance_id):
+        self.placed.append((ip, hostname, instance_id))
+
     def get_running_vms(self):
         return self.rows
 
@@ -94,6 +102,36 @@ class FakeVM:
 
     def save(self):
         FakeVM.saved.append(dict(self.attributes))
+
+
+class FakeNode:
+    """Stands in for a node's XML-RPC plugin."""
+
+    def __init__(self, url, vms):
+        self.url = url
+        self.vms = vms
+        FakeNode.last = self
+
+    def get_vms(self, infra):
+        self.asked = infra
+        return self.vms
+
+
+class FailingNode(FakeNode):
+
+    def get_vms(self, infra):
+        raise socket.error('connection refused')
+
+
+class FakeXMLRPC:
+    """The xmlrpclib names the plugin uses, with a proxy we control."""
+
+    Fault = xmlrpclib.Fault
+    ProtocolError = xmlrpclib.ProtocolError
+    ResponseError = xmlrpclib.ResponseError
+
+    def __init__(self, proxy):
+        self.ServerProxy = proxy
 
 
 def controller(db=None, connection=None):
@@ -256,6 +294,105 @@ class UpdateVmsInfoTest(unittest.TestCase):
 
     def test_nothing_running_saves_nothing(self):
         self.assertEqual(self.update([]), [])
+
+
+class GrepNodesTest(unittest.TestCase):
+    """
+    Node discovery, which runs in the constructor: whatever it returns is
+    stored and iterated by everything else.
+    """
+
+    def setUp(self):
+        self.tmp = tempfile.mkdtemp()
+        self.plugin = controller()
+        logging.disable(logging.ERROR)
+
+    def tearDown(self):
+        shutil.rmtree(self.tmp)
+        logging.disable(logging.NOTSET)
+
+    def config(self, contents):
+        path = os.path.join(self.tmp, 'eucalyptus.conf')
+        f = open(path, 'w')
+        f.write(contents)
+        f.close()
+        return path
+
+    def test_reads_the_nodes_from_the_eucalyptus_config(self):
+        path = self.config('# comment\nNODES="10.0.0.2 10.0.0.3"\n')
+        self.assertEqual(self.plugin.grepNodes(infra='eucalyptus', file=path),
+                         ['10.0.0.2', '10.0.0.3'])
+
+    def test_a_config_without_a_nodes_line_gives_an_empty_list(self):
+        #it used to return None implicitly, which is stored as self.nodes and
+        #raises TypeError on the next "for node in self.nodes"
+        path = self.config('# a cloud with no nodes registered yet\n')
+        self.assertEqual(self.plugin.grepNodes(infra='eucalyptus', file=path), [])
+
+    def test_a_nodes_line_with_no_nodes_gives_an_empty_list(self):
+        path = self.config('NODES=""\n')
+        self.assertEqual(self.plugin.grepNodes(infra='eucalyptus', file=path), [])
+
+    def test_an_unsupported_platform_gives_an_empty_list(self):
+        self.assertEqual(self.plugin.grepNodes(infra='vsphere', file=self.config('')), [])
+
+    def test_opennebula_resolves_the_names_onehost_reports(self):
+        self.plugin.opennebula_nodes = lambda: ['10.0.0.4']
+        self.assertEqual(self.plugin.grepNodes(infra='opennebula'), ['10.0.0.4'])
+
+
+class GetVmListRunningOnNodeTest(unittest.TestCase):
+    """The XML-RPC call out to a node."""
+
+    def setUp(self):
+        self.real_xmlrpclib = module.xmlrpclib
+        self.plugin = controller()
+        logging.disable(logging.ERROR)
+
+    def tearDown(self):
+        module.xmlrpclib = self.real_xmlrpclib
+        logging.disable(logging.NOTSET)
+
+    def test_returns_what_the_node_reports(self):
+        vms = [{'instance_id':'i-1', 'node_hostname':'node01'}]
+        module.xmlrpclib = FakeXMLRPC(lambda url: FakeNode(url, vms))
+        self.assertEqual(self.plugin.get_vm_list_running_on_node('10.0.0.2'), vms)
+
+    def test_asks_the_node_on_the_configured_port(self):
+        module.xmlrpclib = FakeXMLRPC(lambda url: FakeNode(url, []))
+        self.plugin.get_vm_list_running_on_node('10.0.0.2')
+        self.assertEqual(FakeNode.last.url,
+                         'http://10.0.0.2:' + module.cluster_config.PORT_PLUGINS_ON_NODES)
+
+    def test_a_node_that_is_down_reports_nothing(self):
+        #one unreachable node must not stop the poll: the others still answer
+        module.xmlrpclib = FakeXMLRPC(lambda url: FailingNode(url, []))
+        self.assertEqual(self.plugin.get_vm_list_running_on_node('10.0.0.2'), [])
+
+
+class UpdateOpennebulaVmsInfoTest(unittest.TestCase):
+    """The opennebula pass: record where each node says its vms are."""
+
+    def setUp(self):
+        self.plugin = controller(db=FakeDb())
+        self.plugin.nodes = ['10.0.0.2', '10.0.0.3']
+        logging.disable(logging.ERROR)
+
+    def tearDown(self):
+        logging.disable(logging.NOTSET)
+
+    def test_records_the_node_each_vm_runs_on(self):
+        on_nodes = {'10.0.0.2':[{'instance_id':'i-1', 'node_hostname':'node01'}],
+                    '10.0.0.3':[{'instance_id':'i-2', 'node_hostname':'node02'}]}
+        self.plugin.get_vm_list_running_on_node = lambda node: on_nodes[node]
+        self.plugin.update_opennebula_vms_info()
+        self.assertEqual(sorted(self.plugin.db.placed),
+                         [('10.0.0.2', 'node01', 'i-1'), ('10.0.0.3', 'node02', 'i-2')])
+
+    def test_a_node_with_no_vms_records_nothing(self):
+        self.plugin.get_vm_list_running_on_node = lambda node: []
+        self.plugin.update_opennebula_vms_info()
+        self.assertEqual(self.plugin.db.placed, [])
 
 
 if __name__ == '__main__':
