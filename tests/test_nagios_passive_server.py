@@ -20,6 +20,7 @@ import running_vms.cluster.cluster_config as cluster_config
 cluster_config.PATH_TO_LOG_FILE = '/tmp/pcmons-nagios-test.log'
 
 from interface.nagios import NagiosPassiveServer as module
+from interface.nagios import services
 
 
 class FakeDb:
@@ -75,6 +76,13 @@ PAYLOAD = {
     'loadavg': {'1':0.75, '5':0.5, '10':0.25},
     'http': {'connections':7},
     'sshattempts': {'valid':'2', 'invalid':'3'},
+    'availability': {'uptime':'1:12'},
+    'backup': {'last_performed':'2026/08/06 02:01:19'},
+    'encryption': {'is_encrypted':'yes', 'cipher':'aes-xts-plain64,luks'},
+    'integrity': {'last_performed':'Thu Aug  6 03:00:12 2026'},
+    'malware': {'detected':0, 'last_scan':'Thu Aug  6 04:58:44 2026'},
+    'password': {'max_age':90},
+    'vulnerability': {'warn':0, 'fail':0},
 }
 
 
@@ -103,8 +111,9 @@ class NagiosPassiveServerTest(unittest.TestCase):
         self.assertEqual(self.db.ip, '10.0.0.77')
 
     def test_registers_a_check_per_metric_it_understands(self):
+        #every metric the agent sends, not just the three it used to read
         self.assertEqual(sorted(self.process().services()),
-                         ['Cpu_Load', 'HTTP_Connections', 'RAM'])
+                         sorted(services.service_names()))
 
     def test_reports_memory_as_a_percentage_and_megabytes(self):
         self.assertEqual(self.process().value('RAM'), '"50;1024/2048"')
@@ -133,8 +142,9 @@ class NagiosPassiveServerTest(unittest.TestCase):
         #without a metric in it. That must not cost the whole notification.
         data = dict(PAYLOAD)
         del data['memory']
-        self.assertEqual(sorted(self.process(data).services()),
-                         ['Cpu_Load', 'HTTP_Connections'])
+        registered = self.process(data).services()
+        self.assertNotIn('RAM', registered)
+        self.assertEqual(len(registered), len(services.service_names()) - 1)
 
     def test_a_notification_with_nothing_in_it_registers_nothing(self):
         self.assertEqual(self.process({}).services(), [])
@@ -143,8 +153,16 @@ class NagiosPassiveServerTest(unittest.TestCase):
         #dividing by it would raise, and taking the rest of the reading down
         #with it would be worse than missing one check
         data = dict(PAYLOAD, memory={'used':0, 'free':0, 'cache':0, 'total':0})
-        self.assertEqual(sorted(self.process(data).services()),
-                         ['Cpu_Load', 'HTTP_Connections'])
+        registered = self.process(data).services()
+        self.assertNotIn('RAM', registered)
+        self.assertIn('Cpu_Load', registered)
+
+    def test_a_malformed_reading_costs_only_its_own_check(self):
+        #a probe reporting something unexpected must not stop the rest
+        data = dict(PAYLOAD, malware={'detected':'lots'})
+        registered = self.process(data).services()
+        self.assertNotIn('Malware', registered)
+        self.assertIn('RAM', registered)
 
     def test_the_notification_is_acknowledged(self):
         self.assertTrue(self.server.process_notification(PAYLOAD, '10.0.0.10'))
@@ -157,6 +175,99 @@ class NagiosPassiveServerTest(unittest.TestCase):
         server.register_passive_check = Recorder()
         self.assertFalse(server.process_notification(PAYLOAD, '10.0.0.99'))
         self.assertEqual(server.register_passive_check.services(), [])
+
+
+class FormatMetricTest(unittest.TestCase):
+    """
+    Each reading becomes a nagios status code and a line of text. The status is
+    what makes nagios alert, so the cases below are the ones that should.
+    """
+
+    def setUp(self):
+        self.server = module.NagiosPassiveServer(db=FakeDb())
+        logging.disable(logging.ERROR)
+
+    def tearDown(self):
+        logging.disable(logging.NOTSET)
+
+    def format(self, metric, reading):
+        return self.server.format_metric(metric, reading)
+
+    def test_malware_found_is_critical(self):
+        status, output = self.format('malware', {'detected':2, 'last_scan':'today'})
+        self.assertEqual(status, module.CRITICAL)
+        self.assertIn('2 infected', output)
+
+    def test_a_clean_scan_is_ok(self):
+        status, output = self.format('malware', {'detected':0, 'last_scan':'today'})
+        self.assertEqual(status, module.OK)
+
+    def test_a_failed_vulnerability_check_is_critical(self):
+        status, output = self.format('vulnerability', {'warn':2, 'fail':1})
+        self.assertEqual(status, module.CRITICAL)
+
+    def test_a_warned_vulnerability_check_is_a_warning(self):
+        status, output = self.format('vulnerability', {'warn':2, 'fail':0})
+        self.assertEqual(status, module.WARNING)
+
+    def test_no_findings_is_ok(self):
+        status, output = self.format('vulnerability', {'warn':0, 'fail':0})
+        self.assertEqual(status, module.OK)
+
+    def test_an_unencrypted_disk_is_a_warning(self):
+        status, output = self.format('encryption', {'is_encrypted':'no', 'cipher':'-'})
+        self.assertEqual(status, module.WARNING)
+
+    def test_an_encrypted_disk_reports_its_cipher(self):
+        status, output = self.format('encryption', {'is_encrypted':'yes', 'cipher':'aes-xts-plain64'})
+        self.assertEqual(status, module.OK)
+        self.assertIn('aes-xts-plain64', output)
+
+    def test_passwords_that_never_expire_are_a_warning(self):
+        #max_age 0 is what login.defs reports when the setting is absent
+        status, output = self.format('password', {'max_age':0})
+        self.assertEqual(status, module.WARNING)
+
+    def test_a_password_policy_is_ok(self):
+        status, output = self.format('password', {'max_age':90})
+        self.assertEqual(status, module.OK)
+        self.assertIn('90', output)
+
+    def test_a_backup_that_never_ran_is_a_warning(self):
+        status, output = self.format('backup', {'last_performed':''})
+        self.assertEqual(status, module.WARNING)
+
+    def test_an_integrity_scan_that_never_ran_is_a_warning(self):
+        #IntegrityMonitor reports "-" when the log holds no report
+        status, output = self.format('integrity', {'last_performed':'-'})
+        self.assertEqual(status, module.WARNING)
+
+    def test_ssh_attempts_are_reported_as_counts(self):
+        #what makes a failed login count alarming is the operator's policy
+        status, output = self.format('sshattempts', {'valid':'2', 'invalid':'3'})
+        self.assertEqual(status, module.OK)
+        self.assertIn('2 accepted', output)
+        self.assertIn('3 failed', output)
+
+    def test_an_overloaded_machine_is_critical(self):
+        #this used to be registered with status 0, so nagios showed the word
+        #CRITICAL in the text and never alerted on it
+        status, output = self.format('loadavg', {'1':3.0, '5':2.0, '10':1.0})
+        self.assertEqual(status, module.CRITICAL)
+
+    def test_a_quote_in_a_value_is_removed(self):
+        #the output is wrapped in quotes and passed to a shell script
+        status, output = self.format('availability', {'uptime':'1:12" ; rm -rf /'})
+        self.assertNotIn('"', output)
+
+    def test_a_pipe_in_a_value_is_replaced(self):
+        #nagios reads everything after a pipe as performance data
+        status, output = self.format('encryption', {'is_encrypted':'yes', 'cipher':'aes|luks'})
+        self.assertNotIn('|', output)
+
+    def test_a_reading_that_cannot_be_read_is_skipped(self):
+        self.assertIsNone(self.format('malware', {'detected':'lots'}))
+        self.assertIsNone(self.format('password', {}))
 
 
 class RegisterPassiveCheckTest(unittest.TestCase):
