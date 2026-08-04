@@ -8,7 +8,7 @@ class HTTPConMonitor:
         self.http_connections = {'connections':0}
 
     def get_http_connections(self):
-    	#cmd = 'ps aux |  awk "{ print $1 }" | egrep "httpd|apache" | wc -l'
+        #cmd = 'ps aux |  awk "{ print $1 }" | egrep "httpd|apache" | wc -l'
         cmd = 'netstat -anp |  grep 8080 | wc -l'
         status, output = commands.getstatusoutput(cmd)
         if status == 0:
