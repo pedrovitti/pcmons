@@ -18,7 +18,7 @@ class VM_Monitoring_Cluster_Plugin:
     """
     def __init__(self):
         self.db = Db_Connector()
-       	# Using boto ec2 library to get info about running vms in an EC2 compatible environment
+        # Using boto ec2 library to get info about running vms in an EC2 compatible environment
         region = boto.ec2.regioninfo.RegionInfo(name=cluster_config.INFRA, endpoint=cluster_config.IP_CLOUD_CONTROLLER)
         self.connection = boto.connect_ec2(aws_access_key_id=cluster_config.AWS_ACCESS_KEY_ID,
                               aws_secret_access_key=cluster_config.AWS_SECRET_ACCESS_KEY,
@@ -142,15 +142,13 @@ class VM_Monitoring_Cluster_Plugin:
                 self.db.insert_new_vm(vm)
 
     def update_opennebula_vms_info(self):
-	'''
-   	    testando metodo
         '''
-	for node in self.nodes:
-	    vms_on_node = self.get_vm_list_running_on_node(node)
-            if len(vms_on_node) > 0:
-	        for vm_on_node in vms_on_node:
-		    self.db.update_vm_Ip_hostname(node, hostname=vm_on_node['node_hostname'], instance_id=vm_on_node['instance_id'])
-         
+        record where each node says its vms are running
+        '''
+        for node in self.nodes:
+            for vm_on_node in self.get_vm_list_running_on_node(node):
+                self.db.update_vm_Ip_hostname(node, hostname=vm_on_node['node_hostname'], instance_id=vm_on_node['instance_id'])
+
     def update_vms_info(self):
         '''
         checks if there are some missing information about a stored vm and tries to update it by querying the node
@@ -181,8 +179,8 @@ class VM_Monitoring_Cluster_Plugin:
 
         for up_vm in up_vms:
             up_vm.save()
-	if(cluster_config.INFRA == 'opennebula'):
-	    self.update_opennebula_vms_info()
+        if cluster_config.INFRA == 'opennebula':
+            self.update_opennebula_vms_info()
 
     def mark_terminated_vms(self, vms):
         running_vms = self.db.get_info_for_monitoring_running_Vms()
