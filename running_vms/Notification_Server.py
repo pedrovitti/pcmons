@@ -1,6 +1,6 @@
 '''
 Author: shirlei@gmail.com
-Description: receives notifications from the vms and passes to the interface
+Description: receives notifications from the vms and passes to the configured interfaces
 Version: 1.0
 '''
 import commands, logging, sys
@@ -10,6 +10,7 @@ sys.path.append('/opt/pcmons/')
 from running_vms.cluster.Mysql_Db_Connector import Db_Connector
 from running_vms.cluster.history import History
 import running_vms.cluster.cluster_config as cluster_config
+from interface import registry
 
 class NotificationServer:
     def __init__(self, db=None, history=None):
@@ -50,17 +51,27 @@ class NotificationServer:
             logging.error('notification with no client address; dropped')
             return False
 
-        #kept before the interface is asked for, so that readings survive a
+        #kept before the interfaces are asked for, so that readings survive a
         #cluster whose interface is misconfigured
         self.record_history(data, address)
 
-        #TODO: allow multiple interfaces at a time
-        interface = self.build_interface()
-        if interface is None:
-            logging.error('no interface configured for %s'%cluster_config.INTERFACE)
+        interfaces = self.build_interfaces()
+        if not interfaces:
+            logging.error('no interface configured; notification dropped')
             return False
 
-        return interface.process_notification(data, address)
+        #the agent is told the reading was taken if anything took it. An
+        #interface that is down is worth reporting, but not worth failing a
+        #notification the others filed
+        taken = False
+        for name, interface in interfaces:
+            try:
+                if interface.process_notification(data, address):
+                    taken = True
+            except:
+                error = sys.exc_info()[1]
+                logging.error('interface %s could not take the notification from %s: %s'%(name, address, error))
+        return taken
 
     def record_history(self, data, address):
         '''
@@ -83,13 +94,25 @@ class NotificationServer:
             logging.error('readings from %s not kept: %s'%(address, e))
             return 0
 
-    def build_interface(self):
-        if cluster_config.INTERFACE.lower() == 'nagios':
-            #imported here rather than at the top: the interface imports the
-            #database layer this module already holds open
-            from interface.nagios import NagiosPassiveServer as nagios
-            return nagios.NagiosPassiveServer()
-        return None
+    def build_interfaces(self):
+        '''
+        the configured interfaces, in the order they were configured
+        '''
+        return registry.build_all(self.configured_interfaces())
+
+    def configured_interfaces(self):
+        '''
+        the interface names to build. INTERFACE is what a config written
+        before there could be more than one sets, and is honoured so that
+        upgrading the code does not silently stop a cluster reporting
+        '''
+        configured = getattr(cluster_config, 'INTERFACES', ())
+        if configured:
+            return list(configured)
+        single = getattr(cluster_config, 'INTERFACE', '')
+        if single:
+            return [single]
+        return []
 
 class RequestHandler(SimpleXMLRPCRequestHandler):
     def __init__(self, request, client_address, server):
