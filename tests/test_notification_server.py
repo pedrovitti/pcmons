@@ -34,6 +34,33 @@ class FakeServer:
     '''Stands in for the SimpleXMLRPCServer the handler writes onto.'''
 
 
+class FakeDb:
+
+    def __init__(self, instance_id='i-1'):
+        self.instance_id = instance_id
+
+    def get_id_by_ip(self, address):
+        if self.instance_id is None:
+            return None
+        return {'instance_id':self.instance_id}
+
+
+class FakeHistory:
+
+    def __init__(self):
+        self.recorded = []
+
+    def record(self, instance_id, data):
+        self.recorded.append((instance_id, data))
+        return len(data)
+
+
+class BrokenHistory:
+
+    def record(self, instance_id, data):
+        raise ValueError('the database is gone')
+
+
 PAYLOAD = {'memory':{'used':1, 'total':2}}
 
 
@@ -87,6 +114,69 @@ class NotificationServerTest(unittest.TestCase):
         payload = {'memory':{'used':1}, 'something_new':{'value':2}}
         self.server.handle_notification(payload, '10.0.0.10')
         self.assertEqual(self.interface.notifications[0][0], payload)
+
+
+class HistoryTest(unittest.TestCase):
+    '''
+    the readings are kept on the way past. What matters here is that keeping
+    them never costs the notification: the vm is waiting to have a check
+    result filed, and history is worth less than that
+    '''
+
+    def setUp(self):
+        self.history = FakeHistory()
+        self.server = module.NotificationServer(db=FakeDb(), history=self.history)
+        self.interface = FakeInterface()
+        self.server.build_interface = lambda: self.interface
+        self.keeping = cluster_config.KEEP_HISTORY
+        logging.disable(logging.ERROR)
+
+    def tearDown(self):
+        cluster_config.KEEP_HISTORY = self.keeping
+        logging.disable(logging.NOTSET)
+
+    def test_the_readings_are_kept(self):
+        self.server.handle_notification(PAYLOAD, '10.0.0.10')
+        self.assertEqual(self.history.recorded, [('i-1', PAYLOAD)])
+
+    def test_they_are_filed_against_the_vm_at_that_address(self):
+        self.server.db = FakeDb(instance_id='i-99')
+        self.server.handle_notification(PAYLOAD, '10.0.0.10')
+        self.assertEqual(self.history.recorded[0][0], 'i-99')
+
+    def test_the_interface_still_gets_the_notification(self):
+        self.server.handle_notification(PAYLOAD, '10.0.0.10')
+        self.assertEqual(self.interface.notifications, [(PAYLOAD, '10.0.0.10')])
+
+    def test_nothing_is_kept_for_an_address_with_no_running_vm(self):
+        self.server.db = FakeDb(instance_id=None)
+        self.assertEqual(self.server.record_history(PAYLOAD, '10.0.0.10'), 0)
+        self.assertEqual(self.history.recorded, [])
+
+    def test_a_database_that_will_not_take_them_does_not_fail_the_notification(self):
+        self.server.history = BrokenHistory()
+        self.assertTrue(self.server.handle_notification(PAYLOAD, '10.0.0.10'))
+        self.assertEqual(self.interface.notifications, [(PAYLOAD, '10.0.0.10')])
+
+    def test_the_readings_are_kept_even_when_no_interface_is_configured(self):
+        #a cluster whose interface is misconfigured still has its history
+        self.server.build_interface = lambda: None
+        self.assertFalse(self.server.handle_notification(PAYLOAD, '10.0.0.10'))
+        self.assertEqual(self.history.recorded, [('i-1', PAYLOAD)])
+
+    def test_history_can_be_turned_off(self):
+        cluster_config.KEEP_HISTORY = False
+        self.server.handle_notification(PAYLOAD, '10.0.0.10')
+        self.assertEqual(self.history.recorded, [])
+
+    def test_turning_it_off_leaves_the_notification_alone(self):
+        cluster_config.KEEP_HISTORY = False
+        self.assertTrue(self.server.handle_notification(PAYLOAD, '10.0.0.10'))
+        self.assertEqual(self.interface.notifications, [(PAYLOAD, '10.0.0.10')])
+
+    def test_a_notification_with_no_address_keeps_nothing(self):
+        self.assertFalse(self.server.handle_notification(PAYLOAD, None))
+        self.assertEqual(self.history.recorded, [])
 
 
 class BuildInterfaceTest(unittest.TestCase):
