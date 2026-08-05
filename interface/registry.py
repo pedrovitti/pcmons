@@ -18,18 +18,23 @@ import logging, sys
 #the interfaces built by name. Kept as names rather than classes because
 #building one opens a database connection, and a cluster configured for
 #Nagios alone should not be paying for the rest
-KNOWN = ('nagios',)
+KNOWN = ('nagios', 'email')
 
 
 def names():
     return KNOWN
 
 
-def build(name):
+def build(name, db=None):
     '''
     an interface by name, or None if there is no interface by that name. The
     name is matched regardless of case: it is typed into a config file by
     hand, and 'Nagios' means what it looks like it means
+
+    The database is handed in rather than opened here. Interfaces are built
+    once and kept, so an interface that opened its own connection would hold a
+    second one for the life of the server -- and would fail to build at all
+    during an outage the server itself survives
     '''
     name = str(name).strip().lower()
     if name == 'nagios':
@@ -37,12 +42,17 @@ def build(name):
         #database layer and whatever client it talks to, and a cluster that
         #does not use it should not have to have those installed
         from interface.nagios import NagiosPassiveServer as nagios
-        return nagios.NagiosPassiveServer()
+        return nagios.NagiosPassiveServer(db=db)
+    if name in ('email', 'mail'):
+        #the package is called mail: one called email would shadow the
+        #standard library module of that name for everything importing it
+        from interface.mail import MailInterface as mail
+        return mail.MailInterface(db=db)
     logging.error('no interface called %s; known interfaces are %s'%(name, ', '.join(KNOWN)))
     return None
 
 
-def build_all(configured):
+def build_all(configured, db=None):
     '''
     (name, interface) for each name that could be built, in the order they
     were configured. A name that is not an interface is left out rather than
@@ -52,7 +62,7 @@ def build_all(configured):
     built = []
     for name in configured:
         try:
-            interface = build(name)
+            interface = build(name, db)
         except:
             #an interface whose client library is missing, or whose server is
             #down, must not take the others with it

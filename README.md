@@ -41,8 +41,13 @@ Repository layout
                       questions about them (last value, one value over time, silence)
       Notification_Server.py  receives the agent notifications, keeps the readings and
                       hands them to the configured interface
-    interface/nagios/ turns monitoring data into Nagios passive checks and generates
+    interface/
+      readings.py     decides what a reading means (status and text); every interface
+                      shares the judgement so they cannot disagree about a VM
+      registry.py     the interfaces a notification can be handed to, by name
+      nagios/         turns monitoring data into Nagios passive checks and generates
                       the Nagios configuration for the monitored VMs
+      mail/           mails the administrators when a metric turns bad or recovers
     third-parties/    Eucalyptus add_key.pl replacement
     vmmonitor_vm.sql  schema for the VM inventory and the kept readings
 

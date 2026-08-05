@@ -134,6 +134,20 @@ def imports_only():
     report('config modules import', 'ok')
 
 
+def interfaces_build():
+    #every configured interface has to at least be constructible without the
+    #cloud: a name in the config that cannot be built is a cluster reporting
+    #into nothing, and the log is the only place that shows
+    from interface import registry
+    #the database belongs to the notification server and is handed in, so this
+    #builds them without one
+    for name in registry.names():
+        built = registry.build(name, db=object())
+        check('interface %s builds'%name, built is not None, True)
+        check('interface %s takes notifications'%name,
+              hasattr(built, 'process_notification'), True)
+
+
 CHECKS = [
     ('memory', probe_memory),
     ('loadavg', probe_loadavg),
@@ -148,6 +162,7 @@ CHECKS = [
     ('vulnerability', probe_vulnerability),
     ('node plugin', node_plugin_listing),
     ('config imports', imports_only),
+    ('interfaces', interfaces_build),
 ]
 
 if __name__ == '__main__':
