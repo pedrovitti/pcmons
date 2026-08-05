@@ -47,6 +47,17 @@ PATH_TO_LOG_FILE = "/var/log/Monitoring_Cloud_Server.log"
 #Table on the database
 VM_TABLE = 'vmmonitor_vm'
 
+#Table holding the readings kept from every notification
+READING_TABLE = 'vmmonitor_reading'
+
+#Whether notifications are kept after being handed to the interface. Turning
+#this off costs the history and the graphs drawn from it, nothing else
+KEEP_HISTORY = True
+
+#How long a reading is kept. Purging is not automatic: Purge_History.py is
+#what applies this, and it is meant to run from cron
+HISTORY_RETENTION_DAYS = 30
+
 #Configurations used in the Generate_VMs_Nagios_Conf.py
 NAGIOS_TEMP_CONF='/tmp/vms_nagios'
 COMMAND_TO_RELOAD_NAGIOS='/etc/init.d/nagios3 reload'
