@@ -118,3 +118,78 @@ class Db_Connector:
         self.cur.execute(sql)
         vms = self.cur.fetchall()
         return vms
+
+
+# readings kept from the notifications, one row per field of one metric
+
+    def insert_readings(self, rows):
+        '''
+        rows are (instance_id, metric, field, value, recorded_at) tuples.
+        Written in one statement: a notification carries around thirty fields
+        and a round trip each would cost more than the reading is worth
+        '''
+        if not rows:
+            return 0
+        sql = "INSERT INTO " + cluster_config.READING_TABLE + "(instance_id, metric, field, value, recorded_at) values(%s,%s,%s,%s,%s)"
+        result = self.cur.executemany(sql, rows)
+        self.db.commit()
+        return result
+
+    def get_readings(self, instance_id, metric=None, field=None, since=None, limit=None):
+        '''
+        readings for a vm, newest first, narrowed by whichever of metric,
+        field and since are given
+        '''
+        sql = "SELECT metric, field, value, recorded_at FROM " + cluster_config.READING_TABLE + " WHERE instance_id=%s"
+        values = [instance_id]
+        if metric is not None:
+            sql += " AND metric=%s"
+            values.append(metric)
+        if field is not None:
+            sql += " AND field=%s"
+            values.append(field)
+        if since is not None:
+            sql += " AND recorded_at>=%s"
+            values.append(since)
+        sql += " ORDER BY recorded_at DESC, id DESC"
+        if limit is not None:
+            sql += " LIMIT %s"
+            values.append(int(limit))
+        self.cur.execute(sql, tuple(values))
+        return self.cur.fetchall()
+
+    def get_latest_readings(self, instance_id):
+        '''
+        the most recent value of every field this vm has ever reported, which
+        is what a status display asks for. A vm whose agent stopped sending a
+        metric keeps the last value it did send, with the time it arrived
+        '''
+        table = cluster_config.READING_TABLE
+        sql = ("SELECT r.metric, r.field, r.value, r.recorded_at FROM " + table + " r"
+               " JOIN (SELECT metric, field, MAX(recorded_at) AS recorded_at FROM " + table +
+               " WHERE instance_id=%s GROUP BY metric, field) newest"
+               " ON r.metric=newest.metric AND r.field=newest.field AND r.recorded_at=newest.recorded_at"
+               " WHERE r.instance_id=%s")
+        self.cur.execute(sql, (instance_id, instance_id))
+        return self.cur.fetchall()
+
+    def get_reading_instance_ids(self):
+        sql = "SELECT DISTINCT instance_id FROM " + cluster_config.READING_TABLE
+        self.cur.execute(sql)
+        return self.cur.fetchall()
+
+    def delete_readings_before(self, cutoff):
+        sql = "DELETE FROM " + cluster_config.READING_TABLE + " WHERE recorded_at<%s"
+        result = self.cur.execute(sql, (cutoff,))
+        self.db.commit()
+        logging.debug('%s readings older than %s discarded'%(result, cutoff))
+        return result
+
+    def delete_readings_for(self, instance_id):
+        '''
+        used when a vm is gone for good and its history is not worth keeping
+        '''
+        sql = "DELETE FROM " + cluster_config.READING_TABLE + " WHERE instance_id=%s"
+        result = self.cur.execute(sql, (instance_id,))
+        self.db.commit()
+        return result
