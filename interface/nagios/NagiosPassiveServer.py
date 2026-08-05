@@ -63,10 +63,7 @@ class NagiosPassiveServer:
         '''
         the running vm reporting from this address, or None
         '''
-        found = self.db.get_id_by_ip(address)
-        if found is None:
-            return None
-        return self.db.get_vm_info(found['instance_id'])
+        return self.db.get_vm_by_ip(address)
 
     def format_metric(self, metric, reading):
         '''

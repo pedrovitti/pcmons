@@ -17,6 +17,7 @@ class NotificationServer:
         logging.basicConfig(level=logging.DEBUG, format = '%(asctime)s %(name)-12s %(levelname)-8s %(message)s', datefmt='%m-%d %H:%M', filename=cluster_config.PATH_TO_LOG_FILE)
         self.db = db or Db_Connector()
         self.history = history or History(self.db)
+        self.interfaces = None
         self.server = None
 
     def serve(self):
@@ -55,7 +56,7 @@ class NotificationServer:
         #cluster whose interface is misconfigured
         self.record_history(data, address)
 
-        interfaces = self.build_interfaces()
+        interfaces = self.active_interfaces()
         if not interfaces:
             logging.error('no interface configured; notification dropped')
             return False
@@ -94,11 +95,24 @@ class NotificationServer:
             logging.error('readings from %s not kept: %s'%(address, e))
             return 0
 
+    def active_interfaces(self):
+        '''
+        the interfaces, built once and kept. An interface holds a database
+        connection, and one that reports changes holds what it last saw:
+        building them per notification opened a connection every five minutes
+        per vm and forgot everything in between
+        '''
+        if self.interfaces is None:
+            self.interfaces = self.build_interfaces()
+        return self.interfaces
+
     def build_interfaces(self):
         '''
         the configured interfaces, in the order they were configured
         '''
-        return registry.build_all(self.configured_interfaces())
+        #the interfaces share the server's connection rather than opening one
+        #each: they are built once and kept for the life of the process
+        return registry.build_all(self.configured_interfaces(), self.db)
 
     def configured_interfaces(self):
         '''

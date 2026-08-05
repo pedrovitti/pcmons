@@ -56,12 +56,12 @@ class BuildTest(RegistryTest):
 class BuildAllTest(RegistryTest):
 
     def test_it_builds_each_configured_interface(self):
-        registry.build = lambda name: name.upper()
+        registry.build = lambda name, db=None: name.upper()
         self.assertEqual(registry.build_all(['nagios', 'email']),
                          [('nagios', 'NAGIOS'), ('email', 'EMAIL')])
 
     def test_the_configured_order_is_kept(self):
-        registry.build = lambda name: name.upper()
+        registry.build = lambda name, db=None: name.upper()
         self.assertEqual([name for name, built in registry.build_all(['email', 'nagios'])],
                          ['email', 'nagios'])
 
@@ -76,18 +76,30 @@ class BuildAllTest(RegistryTest):
 
     def test_an_interface_that_will_not_build_is_left_out(self):
         #a missing client library, or a server that is down
-        def broken(name):
+        def broken(name, db=None):
             raise ImportError('no module named smtplib')
         registry.build = broken
         self.assertEqual(registry.build_all(['email']), [])
 
     def test_one_that_will_not_build_does_not_stop_the_others(self):
-        def sometimes(name):
+        def sometimes(name, db=None):
             if name == 'email':
                 raise ImportError('no module named smtplib')
             return name.upper()
         registry.build = sometimes
         self.assertEqual(registry.build_all(['email', 'nagios']), [('nagios', 'NAGIOS')])
+
+    def test_the_database_is_handed_to_the_interface(self):
+        #interfaces are built once and kept, so one that opened its own
+        #connection would hold a second one for the life of the server
+        db = object()
+        self.assertTrue(registry.build('nagios', db=db).db is db)
+
+    def test_the_database_reaches_every_interface(self):
+        db = object()
+        built = registry.build_all(['nagios', 'email'], db)
+        for name, interface in built:
+            self.assertTrue(interface.db is db, name)
 
     def test_configuring_nothing_builds_nothing(self):
         self.assertEqual(registry.build_all([]), [])

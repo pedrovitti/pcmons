@@ -40,6 +40,12 @@ class FakeDb:
             return None
         return self.vm
 
+    def get_vm_by_ip(self, ip):
+        self.ip = ip
+        if not self.known:
+            return None
+        return self.vm
+
 
 class FakeCommands:
 
