@@ -79,5 +79,11 @@ LISTEN_IP = os.environ.get('PCMONS_LISTEN_IP', '150.162.63.32')
 #Port where this client will listen to requests
 LISTEN_PORT = int(os.environ.get('PCMONS_LISTEN_PORT', 60001))
 
+#Interfaces every notification is handed to, in order. A cluster can report
+#into more than one at a time; each is given the readings whole
+INTERFACES = ('nagios',)
+
+#Kept for configs written before there could be more than one. Set INTERFACES
+#instead: this is used only when INTERFACES is empty
 INTERFACE="nagios"
 
