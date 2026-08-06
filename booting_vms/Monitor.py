@@ -30,6 +30,10 @@ class Monitor:
         self.passwordMonitor = PasswordMonitor()
         self.vulnerabilityMonitor = VulnerabilityMonitor()
 
+    def run(self):
+        '''
+        collect and report for as long as the vm is up
+        '''
         while True:
             now = datetime.datetime.now()
             print now.strftime("%d-%m-%Y %H:%M:%S")
@@ -71,8 +75,10 @@ class Monitor:
             server = xmlrpclib.ServerProxy('%s:%s'%(settings.SERVER, settings.SERVER_PORT))
             sent = server.get_vm_notification(data)
         except (socket_error, xmlrpclib.Fault, xmlrpclib.ProtocolError, xmlrpclib.ResponseError), error_code:
-            print error_code
+            #the agent runs detached with its output sent to /dev/null, so the
+            #log is the only place this is ever read
             logging.error('Err: (%s)'%error_code)
 
 if __name__ == "__main__":
     monitor = Monitor()
+    monitor.run()
