@@ -12,7 +12,10 @@ class IntegrityMonitor:
         log_path = "/var/log/tripwire.log"
 
         f = open(log_path, 'r')
-        lines = f.readlines()
+        try:
+            lines = f.readlines()
+        finally:
+            f.close()
 
         pattern = "Report created on:"
         last_scan = "-"
