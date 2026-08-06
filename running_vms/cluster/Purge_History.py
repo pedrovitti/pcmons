@@ -1,14 +1,12 @@
 '''
-    Author: shirlei@gmail.com
-    Description: discards kept readings past the retention window
-    Version: 1.0
+Discards kept readings past the retention window.
 
-    Meant for cron, nightly:
-        0 4 * * * python /opt/pcmons/running_vms/cluster/Purge_History.py
+Meant for cron, nightly:
+    0 4 * * * python /opt/pcmons/running_vms/cluster/Purge_History.py
 
-    Takes the window from cluster_config.HISTORY_RETENTION_DAYS, or from a
-    number of days given on the command line, which is how a cluster short of
-    disk is cleared out by hand without editing the config.
+Takes the window from cluster_config.HISTORY_RETENTION_DAYS, or from a
+number of days given on the command line, which is how a cluster short of
+disk is cleared out by hand without editing the config.
 '''
 import logging, sys
 sys.path.append('/opt/pcmons/')

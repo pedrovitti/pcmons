@@ -1,15 +1,13 @@
 '''
-    Author: shirlei@gmail.com
-    Description: keeps the readings the vms report, and answers questions about them
-    Version: 1.0
+Keeps the readings the vms report, and answers questions about them.
 
-    Every notification was handed to the interface and then dropped, so the
-    only record of a vm was whatever the interface chose to draw. This keeps
-    the readings themselves: what a vm reported, when, and what it reported
-    before that.
+Every notification was handed to the interface and then dropped, so the
+only record of a vm was whatever the interface chose to draw. This keeps
+the readings themselves: what a vm reported, when, and what it reported
+before that.
 
-    A notification is stored one row per field, so the used memory of a vm
-    over a week is a query rather than a pile of payloads to parse.
+A notification is stored one row per field, so the used memory of a vm
+over a week is a query rather than a pile of payloads to parse.
 '''
 import datetime, logging, sys
 sys.path.append('/opt/pcmons/')
