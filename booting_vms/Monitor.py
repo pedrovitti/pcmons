@@ -35,8 +35,9 @@ class Monitor:
         collect and report for as long as the vm is up
         '''
         while True:
-            now = datetime.datetime.now()
-            print now.strftime("%d-%m-%Y %H:%M:%S")
+            #the agent runs detached with its output sent to /dev/null, so the
+            #log is where this is read
+            logging.debug('collecting at %s'%datetime.datetime.now().strftime("%d-%m-%Y %H:%M:%S"))
             data = self.get_monitoring_data()
             self.send_monitoring_data(data)
             time.sleep(300) # 5 minutes for now
