@@ -178,26 +178,16 @@ class VM_Monitoring_Cluster_Plugin:
 
     def mark_terminated_vms(self, vms):
         running_vms = self.db.get_info_for_monitoring_running_Vms()
-        terminated_list = []
-        running_vms_ids = []
-        vms_ids = []
-        if len(running_vms)  > 0 :
-            for running_vm in running_vms:
-               running_vms_ids.append(running_vm['instance_id'])
-        if len(vms) > 0:
-            for vm in vms:
-               vms_ids.append(vm['instance_id'])
-        if len (running_vms_ids) > 0:
-            for running_vm_id in running_vms_ids:
-                if running_vm_id not in vms_ids:
-                    terminated_list.append(running_vm_id)
-        if len(vms) > 0:
-            for vm in vms:
-                if vm['state'] == 'terminated':
-                    terminated_list.append(vm['instance_id'])
-        if len (terminated_list) > 0:
-            for terminated_vm_id in terminated_list:
-                self.db.set_status_terminated(terminated_vm_id)
+        running_vms_ids = [running_vm['instance_id'] for running_vm in running_vms]
+        vms_ids = [vm['instance_id'] for vm in vms]
+
+        #a vm the db still has as running but the cloud no longer reports is
+        #gone, and so is one the cloud reports as terminated outright
+        terminated_list = set(id for id in running_vms_ids if id not in vms_ids)
+        terminated_list.update(vm['instance_id'] for vm in vms if vm['state'] == 'terminated')
+
+        for terminated_vm_id in terminated_list:
+            self.db.set_status_terminated(terminated_vm_id)
 
 if __name__ == "__main__":
     controller = VM_Monitoring_Cluster_Plugin()
