@@ -1,13 +1,10 @@
-import string
 
 class IntegrityMonitor:
     '''
     Class for Integrity Monitoring based on tripwire
     '''
-    integrity = {'last_performed':""}
-
     def __init__(self):
-        self.server = '150.162.63.32'
+        self.integrity = {'last_performed':""}
 
     def get_integrity_info(self):
 
