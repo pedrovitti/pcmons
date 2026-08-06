@@ -141,12 +141,6 @@ class VM_Monitoring_Cluster_Plugin:
             else:
                 self.db.insert_new_vm(vm)
 
-    def store_vm_monitoring(self,data):
-        '''
-            store monitoring data comming from the vm
-        '''
-        print 'ok!'
-
     def update_opennebula_vms_info(self):
 	'''
    	    testando metodo
