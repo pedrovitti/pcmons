@@ -30,13 +30,16 @@ class VM_Monitoring_Cluster_Plugin:
         #Set up logging
         logging.basicConfig(level=logging.DEBUG, format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s', datefmt='%m-%d %H:%M', filename=cluster_config.PATH_TO_LOG_FILE)
 
+    def run(self):
+        '''
+        poll the cloud and keep the stored inventory in step with it
+        '''
         while True:
             vms = self.get_running_vms()
-            #self.mark_terminated_vms(vms)
             self.store_vms_info(vms)
-	    self.mark_terminated_vms(vms)
+            self.mark_terminated_vms(vms)
             # Checks if any running vm has missing information (node placement, for example)
-            self.update_vms_info() 
+            self.update_vms_info()
             time.sleep(60)
 
 
@@ -191,4 +194,5 @@ class VM_Monitoring_Cluster_Plugin:
 
 if __name__ == "__main__":
     controller = VM_Monitoring_Cluster_Plugin()
+    controller.run()
     sys.exit()
