@@ -155,27 +155,31 @@ class VM_Monitoring_Cluster_Plugin:
             #        for id in update_info:
                         #self.db.update_vm_Ip_hostname(node, id[1],id[0])
 
-        vm = vms.VM()
-        running = self.db.get_running_vms()
         up_vms = []
-        if (len(running) > 0 ):
-            for row in running:
-                for key in row.iterkeys():
-                    if vm.attributes.has_key(key):
-                        vm.attributes[key] = row[key]
-                        if row[key] == '':
-                            print 'empty key value: %s %s'%(row[key], key)
-                            for node in self.nodes:
-                                vms_on_node = self.get_vm_list_running_on_node(node)
-				if len(vms_on_node) > 0:
-                                    for vm_on_node in vms_on_node:
-                                        if vm_on_node['instance_id'] == row['instance_id']:
-                                            vm.attributes['node_hostname'] = vm_on_node['node_hostname']
-                                            vm.attributes['node_ip'] = node
-                            up_vms.append(vm)
-        if (len(up_vms) > 0):
-            for up_vm in up_vms:
-                up_vm.save()
+        for row in self.db.get_running_vms():
+            #one record per row: a single VM reused here would end up holding
+            #the last row's values, saved once per row
+            vm = vms.VM()
+            incomplete = False
+            for key, value in row.iteritems():
+                if key in vm.attributes:
+                    vm.attributes[key] = value
+                    if value == '':
+                        incomplete = True
+
+            if not incomplete:
+                continue
+
+            logging.debug('vm %s has missing information; asking the nodes'%row['instance_id'])
+            for node in self.nodes:
+                for vm_on_node in self.get_vm_list_running_on_node(node):
+                    if vm_on_node['instance_id'] == row['instance_id']:
+                        vm.attributes['node_hostname'] = vm_on_node['node_hostname']
+                        vm.attributes['node_ip'] = node
+            up_vms.append(vm)
+
+        for up_vm in up_vms:
+            up_vm.save()
 	if(cluster_config.INFRA == 'opennebula'):
 	    self.update_opennebula_vms_info()
 
