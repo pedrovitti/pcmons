@@ -59,13 +59,14 @@ class PayloadContractTest(unittest.TestCase):
         self.assertEqual(missing, set(),
                          'expected but never collected: %s'%', '.join(sorted(missing)))
 
-    def test_the_interface_can_format_every_metric_it_expects(self):
-        #services.py names them; NagiosPassiveServer needs a format_ method for
-        #each, or the reading is logged as unreadable and dropped
-        from interface.nagios import NagiosPassiveServer as interface
+    def test_every_expected_metric_can_be_read(self):
+        #services.py names them; readings.py needs a format_ for each, or the
+        #reading is logged as unreadable and dropped -- by every interface at
+        #once, now that they share the judgement
+        from interface import readings
         for metric in expected_metrics():
-            self.assertTrue(hasattr(interface.NagiosPassiveServer, 'format_%s'%metric),
-                            'no format_%s in NagiosPassiveServer'%metric)
+            self.assertTrue(hasattr(readings, 'format_%s'%metric),
+                            'no format_%s in readings'%metric)
 
     def test_each_metric_maps_to_one_service(self):
         names = services.service_names()
