@@ -144,17 +144,6 @@ class VM_Monitoring_Cluster_Plugin:
         checks if there are some missing information about a stored vm and tries to update it by querying the node
         where the vm is running
         '''
-        #vms_without_ip = self.db.get_stored_vms_ids_without_IP()
-        #if len(vms_without_ip) > 0 :
-         #   ids = [t[0] for t in vms_without_ip ]
-            # ask to the nodes
-          #  for node in self.nodes:
-           #     vms_on_node = self.get_vm_list_running_on_node(node)
-            #    if len(vms_on_node) > 0:
-             #       update_info = [(vm['instance_id'],vm['node_hostname']) for vm in vms_on_node if vm['instance_id'] in ids]
-            #        for id in update_info:
-                        #self.db.update_vm_Ip_hostname(node, id[1],id[0])
-
         up_vms = []
         for row in self.db.get_running_vms():
             #one record per row: a single VM reused here would end up holding
