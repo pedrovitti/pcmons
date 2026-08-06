@@ -10,14 +10,17 @@ class VM_Monitoring_Node_Plugin:
     """
     SUPPORTED_INFRA = ('eucalyptus', 'opennebula')
 
-    def __init__(self):
+    def serve(self):
+        '''
+        answers queries about this node until it is stopped
+        '''
         logging.basicConfig(level=logging.DEBUG, format = '%(asctime)s %(name)-12s %(levelname)-8s %(message)s', datefmt='%m-%d %H:%M', filename=node_config.PATH_TO_LOG_FILE)
-	print "Initializing Node Plugin.."
+        print "Initializing Node Plugin.."
         server = SimpleXMLRPCServer((node_config.LISTEN_IP, node_config.LISTEN_PORT), logRequests=True)
         server.register_function(self.do_default)
         server.register_function(self.get_vms)
         server.register_function(self.get_monitoring_data)
-	try:
+        try:
             server.serve_forever()
         except:
             e = sys.exc_info()[1]
@@ -93,4 +96,5 @@ class VM_Monitoring_Node_Plugin:
 
 if __name__ == "__main__":
     client = VM_Monitoring_Node_Plugin()
+    client.serve()
     sys.exit()
