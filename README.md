@@ -103,6 +103,30 @@ Installation
 5. Run the other files in the cluster/cloud controller host (where Nagios is installed).
 
 
+Configuration
+--------
+
+
+Every setting lives in a plain Python module, so it can be edited directly. The addresses
+each component binds to or reports to can also be set from the environment, which avoids
+editing a file that gets copied to every node or baked into a VM image:
+
+| Variable | Overrides | Default |
+| --- | --- | --- |
+| `PCMONS_SERVER` | address the in-VM agent reports to (`booting_vms/settings.py`) | `http://150.162.63.32` |
+| `PCMONS_SERVER_PORT` | port of that server | `60001` |
+| `PCMONS_LISTEN_IP` | address `Notification_Server.py` binds to (`cluster_config.py`) | `150.162.63.32` |
+| `PCMONS_LISTEN_PORT` | port it binds to | `60001` |
+| `PCMONS_NODE_LISTEN_IP` | address the node plugin binds to (`node_config.py`) | `stratus.lrg.ufsc.br` |
+| `PCMONS_NODE_LISTEN_PORT` | port it binds to | `60000` |
+| `PCMONS_NODE_LOG_FILE` | node plugin log file | `/var/log/Monitoring_Cloud_Client.log` |
+
+Use `0.0.0.0` as a listen address to accept requests on every interface.
+
+The remaining settings — database credentials, IaaS platform, Nagios paths — have no
+environment override and must be edited in `running_vms/cluster/cluster_config.py`.
+
+
 Information
 --------
 
