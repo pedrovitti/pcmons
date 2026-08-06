@@ -1,0 +1,42 @@
+#Test environment for pcmons. Run from the repository root:
+#
+#  docker compose -f docker/docker-compose.yml run --rm smoke   # probes, no db
+#  docker compose -f docker/docker-compose.yml run --rm dbtest  # Db_Connector
+#
+services:
+  db:
+    image: mariadb:10.11
+    environment:
+      MARIADB_ROOT_PASSWORD: root
+      MARIADB_DATABASE: manager
+      MARIADB_USER: manager
+      MARIADB_PASSWORD: cloudmanager
+    #the schema is applied on first start
+    volumes:
+      - ../vmmonitor_vm.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 3s
+      timeout: 5s
+      retries: 20
+
+  smoke:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    volumes:
+      - ..:/opt/pcmons
+    command: ["python", "docker/smoke_test.py"]
+
+  dbtest:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    volumes:
+      - ..:/opt/pcmons
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      PCMONS_DB_HOST: db
+    command: ["python", "docker/db_test.py"]

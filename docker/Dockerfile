@@ -11,6 +11,9 @@ deb http://archive.debian.org/debian-security buster/updates main\n' > /etc/apt/
         procps \
         net-tools \
         default-mysql-client \
+        gcc \
+        libc6-dev \
+        default-libmysqlclient-dev \
     && rm -rf /var/lib/apt/lists/*
 
 COPY docker/requirements.txt /tmp/requirements.txt
