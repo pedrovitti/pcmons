@@ -6,6 +6,7 @@ This is the only component whose failure hides every other one: a malformed
 file here and Nagios does not come back, so nothing is monitored at all. The
 tests assert on the generated text rather than on the file writing.
 '''
+import logging
 import os
 import shutil
 import sys
@@ -136,6 +137,87 @@ class BuildConfTest(unittest.TestCase):
         #an unbalanced brace is the failure that stops nagios from starting
         conf = self.conf([vm('i-1'), vm('i-2', node_ip='10.0.0.3')])
         self.assertEqual(conf.count('{'), conf.count('}'))
+
+
+class ReloadIfNecessaryTest(unittest.TestCase):
+    """
+    Puts the generated file in place and reloads Nagios. Both halves fail
+    quietly if they go wrong: Nagios keeps serving the configuration it already
+    has, and the run looks like it worked.
+    """
+
+    def setUp(self):
+        self.tmp = tempfile.mkdtemp()
+        self.generated = os.path.join(self.tmp, 'vms_nagios')
+        self.live = os.path.join(self.tmp, 'vms_nagios.cfg')
+        self.real_temp = cluster_config.NAGIOS_TEMP_CONF
+        self.real_live = cluster_config.VMS_NAGIOS_FILE
+        cluster_config.NAGIOS_TEMP_CONF = self.generated
+        cluster_config.VMS_NAGIOS_FILE = self.live
+
+        self.generator = module.Generate_VMs_Nagios_Conf(db=FakeDb())
+        self.reloads = []
+        self.generator.reload_nagios = lambda: self.reloads.append(True)
+        logging.disable(logging.ERROR)
+
+    def tearDown(self):
+        cluster_config.NAGIOS_TEMP_CONF = self.real_temp
+        cluster_config.VMS_NAGIOS_FILE = self.real_live
+        shutil.rmtree(self.tmp)
+        logging.disable(logging.NOTSET)
+
+    def write(self, path, contents):
+        f = open(path, 'w')
+        f.write(contents)
+        f.close()
+
+    def test_a_first_run_puts_the_file_in_place_and_reloads(self):
+        self.write(self.generated, 'define host {}\n')
+        self.assertTrue(self.generator.reload_nagios_if_necessary())
+        self.assertEqual(self.reloads, [True])
+        self.assertEqual(open(self.live).read(), 'define host {}\n')
+
+    def test_a_changed_configuration_is_moved_and_reloaded(self):
+        self.write(self.live, 'define host { old }\n')
+        self.write(self.generated, 'define host { new }\n')
+        self.assertTrue(self.generator.reload_nagios_if_necessary())
+        self.assertEqual(open(self.live).read(), 'define host { new }\n')
+
+    def test_an_unchanged_configuration_does_not_reload(self):
+        #the vm list barely changes, and reloading nagios on every cron run
+        #drops the check state it holds in memory
+        self.write(self.live, 'same\n')
+        self.write(self.generated, 'same\n')
+        self.assertFalse(self.generator.reload_nagios_if_necessary())
+        self.assertEqual(self.reloads, [])
+
+    def test_the_generated_file_is_consumed_once_moved(self):
+        #it is a temp file; leaving it behind means the next run compares
+        #against a stale generation
+        self.write(self.generated, 'new\n')
+        self.generator.reload_nagios_if_necessary()
+        self.assertFalse(os.path.exists(self.generated))
+
+    def test_nothing_generated_means_nothing_to_reload(self):
+        #create_nagios_conf_running_vms failed; nagios must keep what it has
+        self.write(self.live, 'still good\n')
+        self.assertFalse(self.generator.reload_nagios_if_necessary())
+        self.assertEqual(self.reloads, [])
+        self.assertEqual(open(self.live).read(), 'still good\n')
+
+    def test_a_file_that_cannot_be_moved_does_not_reload(self):
+        #reloading here would tell nagios to re-read the old file and the run
+        #would report success
+        self.write(self.generated, 'new\n')
+        cluster_config.VMS_NAGIOS_FILE = os.path.join(self.tmp, 'no_such_dir', 'vms.cfg')
+        self.assertFalse(self.generator.reload_nagios_if_necessary())
+        self.assertEqual(self.reloads, [])
+
+    def test_a_whitespace_difference_still_counts_as_a_change(self):
+        #the comparison is over the bytes, not a parse of the file
+        self.write(self.live, 'define host {}\n')
+        self.write(self.generated, 'define host {}\n\n')
+        self.assertTrue(self.generator.reload_nagios_if_necessary())
 
 
 class RemoveOldConfTest(unittest.TestCase):
