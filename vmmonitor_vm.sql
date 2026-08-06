@@ -43,3 +43,29 @@ CREATE TABLE IF NOT EXISTS `vmmonitor_vm` (
   `node_ip` varchar(50) DEFAULT NULL,
   PRIMARY KEY (`instance_id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `vmmonitor_reading`
+--
+-- One row per field of one metric of one notification: the memory reading of
+-- a vm becomes a row for total, one for used and one for free. Storing the
+-- fields apart rather than the metric whole is what makes a series of one
+-- value over time a query instead of a parsing job.
+--
+-- Values are kept as text because that is what the agents send; whether a
+-- field is a number is a question for whoever reads it back.
+--
+
+CREATE TABLE IF NOT EXISTS `vmmonitor_reading` (
+  `id` bigint(20) NOT NULL AUTO_INCREMENT,
+  `instance_id` varchar(50) NOT NULL DEFAULT '',
+  `metric` varchar(50) NOT NULL DEFAULT '',
+  `field` varchar(50) NOT NULL DEFAULT '',
+  `value` varchar(255) DEFAULT NULL,
+  `recorded_at` datetime NOT NULL,
+  PRIMARY KEY (`id`),
+  KEY `reading_lookup` (`instance_id`,`metric`,`field`,`recorded_at`),
+  KEY `reading_age` (`recorded_at`)
+) ENGINE=MyISAM DEFAULT CHARSET=latin1;
