@@ -29,12 +29,25 @@ class VM_Monitoring_Node_Plugin:
         maps the hypervisor domain name to the id the cloud platform uses.
         '''
         hostname = commands.getoutput('hostname')
-        vms_running_host = commands.getoutput("virsh list | cut -c5-14")
-        #drops the two header lines virsh prints before the domain list
-        vms_running_host = vms_running_host.split()[3:]
+        output = commands.getoutput("virsh list")
+
+        #virsh prints a header and a dashed rule before the domains; take the
+        #name column of every row below the rule rather than slicing by column
+        #position, which varies between libvirt versions
+        domains = []
+        past_header = False
+        for line in output.splitlines():
+            stripped = line.strip()
+            if not past_header:
+                if stripped and stripped == '-'*len(stripped):
+                    past_header = True
+                continue
+            columns = stripped.split()
+            if len(columns) >= 2:
+                domains.append(columns[1])
 
         vms = []
-        for domain in vms_running_host:
+        for domain in domains:
             instance_id = domain
             if rename_instance_id is not None:
                 instance_id = rename_instance_id(domain)
