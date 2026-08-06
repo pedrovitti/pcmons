@@ -100,6 +100,59 @@ def main():
     check('writes persisted for a new connection',
           other.get_vm_info('i-101')['node_hostname'], 'node01')
 
+    #i-100 was left shutting-down above, and the sample vms all report from one
+    #address; give it a state and an address of its own for the queries below
+    restored = sample('i-100')
+    restored['public_dns_name'] = '150.162.63.91'
+    db.update_stored_vm_info(restored)
+
+    #the monitoring queries the Nagios interface and the config generator use
+    monitoring = db.get_info_for_monitoring_running_Vms()
+    check('running vms listed for monitoring',
+          sorted(row['instance_id'] for row in monitoring), ['i-100', 'i-101'])
+    check('monitoring rows carry the columns nagios needs',
+          sorted(monitoring[0].keys()),
+          ['instance_id', 'node_hostname', 'node_ip', 'public_dns_name', 'user'])
+
+    old = db.get_info_for_monitoring_old_Vms()
+    check('terminated vms listed separately',
+          [row['instance_id'] for row in old], ['i-102'])
+
+    #get_id_by_ip is the first thing every notification does: the agent reports
+    #from an address, and this turns it into the vm it belongs to
+    check('vm found by the address it reports from',
+          db.get_id_by_ip('150.162.63.91')['instance_id'], 'i-100')
+
+    #a terminated vm must not answer, or a recycled address would file another
+    #vm's readings against it
+    db.cur.execute("UPDATE vmmonitor_vm SET public_dns_name='150.162.63.99' WHERE instance_id='i-102'")
+    db.db.commit()
+    try:
+        db.get_id_by_ip('150.162.63.99')
+        results.append((False, 'terminated vm not matched by address', 'returned a row'))
+    except IndexError:
+        #it does not answer, but it raises rather than returning nothing --
+        #get_id_by_ip returns vms[0] on an empty result. Recorded as it stands;
+        #the caller (NagiosPassiveServer) loses the notification either way.
+        results.append((True, 'terminated vm not matched by address', 'raises IndexError'))
+
+    #update_vm_info writes a whole record at once; this is the path vms.VM.save
+    #takes, and the only writer that sets node placement and last_check together
+    record = {
+        'instance_id':'i-100', 'node_ip':'10.0.0.3', 'node_hostname':'node02',
+        'last_check':'2026-08-06 10:00:00', 'state':'running',
+    }
+    db.update_vm_info(record)
+    stored = db.get_vm_info('i-100')
+    check('whole record update applied', stored['node_hostname'], 'node02')
+    check('whole record update sets every column given', stored['last_check'], '2026-08-06 10:00:00')
+    check('whole record update leaves other columns alone', stored['user'], 'oneadmin')
+
+    #connect() is called again by nothing today, but a long running controller
+    #that reconnects must come back with a working cursor
+    db.connect()
+    check('reconnecting gives a usable cursor', db.get_vm_info('i-100')['node_hostname'], 'node02')
+
 
 if __name__ == '__main__':
     try:
