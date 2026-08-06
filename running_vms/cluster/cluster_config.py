@@ -54,7 +54,8 @@ READING_TABLE = 'vmmonitor_reading'
 #this off costs the history and the graphs drawn from it, nothing else
 KEEP_HISTORY = True
 
-#How long a reading is kept. Purging is not automatic: run the cron entry
+#How long a reading is kept. Purging is not automatic: Purge_History.py is
+#what applies this, and it is meant to run from cron
 HISTORY_RETENTION_DAYS = 30
 
 #Configurations used in the Generate_VMs_Nagios_Conf.py
