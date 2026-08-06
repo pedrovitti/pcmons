@@ -2,7 +2,7 @@
 #no compiler and no client headers. Mysql_Db_Connector falls back to it when
 #MySQLdb is absent; deployments that already have python-mysqldb keep using it.
 #0.10.x is the last series supporting python 2.
-PyMySQL==0.10.1
+PyMySQL==1.1.1
 #boto 2 is what VM_Monitoring_Cluster_Plugin.py targets; it is the last release
 #and still supports python 2.
 boto==2.49.0
