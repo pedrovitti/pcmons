@@ -1,0 +1,4 @@
+--WARN-- [acc001w] Login ID sync is disabled but has a valid shell.
+--WARN-- [acc002w] Login ID games is disabled but has a valid shell.
+--FAIL-- [perm001f] /etc/passwd is group writable.
+--INFO-- [init001i] Checking for secure startup scripts.

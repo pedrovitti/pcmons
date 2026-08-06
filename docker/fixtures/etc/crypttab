@@ -1,0 +1,2 @@
+#<target name> <source device> <key file> <options>
+sda3_crypt /dev/sda3 none aes-xts-plain64,luks

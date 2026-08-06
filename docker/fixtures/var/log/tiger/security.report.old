@@ -1,0 +1,2 @@
+--WARN-- [acc001w] Login ID sync is disabled but has a valid shell.
+--FAIL-- [perm002f] /etc/shadow is world readable.
