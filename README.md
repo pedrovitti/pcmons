@@ -16,6 +16,17 @@ Authors:
 Site: https://github.com/pedrovitti/pcmons
 
 
+Status
+--------
+
+
+pcmons is research code that came out of the work referenced below, and it targets the
+cloud stacks of that period. It runs on **Python 2 only** — the sources use `print`
+statements, the `commands` module and `xmlrpclib`, none of which exist in Python 3. Expect
+to pair it with a contemporary Eucalyptus/OpenNebula and Nagios install rather than a
+current one.
+
+
 Repository layout
 --------
 
