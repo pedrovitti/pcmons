@@ -24,14 +24,19 @@ from interface.nagios import NagiosPassiveServer as module
 
 class FakeDb:
 
-    def __init__(self, vm=None):
+    def __init__(self, vm=None, known=True):
         self.vm = vm or {'user':'oneadmin', 'instance_id':'i-42', 'node_hostname':'node01'}
+        self.known = known
 
     def get_id_by_ip(self, ip):
         self.ip = ip
+        if not self.known:
+            return None
         return {'instance_id':self.vm['instance_id']}
 
     def get_vm_info(self, instance_id):
+        if not self.known:
+            return None
         return self.vm
 
 
@@ -143,6 +148,15 @@ class NagiosPassiveServerTest(unittest.TestCase):
 
     def test_the_notification_is_acknowledged(self):
         self.assertTrue(self.server.process_notification(PAYLOAD, '10.0.0.10'))
+
+    def test_an_address_no_running_vm_has_is_dropped(self):
+        #an agent reporting after its vm was marked terminated, or from an
+        #address the inventory never recorded. This used to raise IndexError
+        #inside get_id_by_ip and take the notification down with it
+        server = module.NagiosPassiveServer(db=FakeDb(known=False))
+        server.register_passive_check = Recorder()
+        self.assertFalse(server.process_notification(PAYLOAD, '10.0.0.99'))
+        self.assertEqual(server.register_passive_check.services(), [])
 
 
 class RegisterPassiveCheckTest(unittest.TestCase):
