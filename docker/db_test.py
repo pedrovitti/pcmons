@@ -7,6 +7,7 @@ survive, which is what the move to bound parameters was for.
 
 Run: docker compose -f docker/docker-compose.yml run --rm dbtest
 '''
+import datetime
 import os
 import sys
 import traceback
@@ -148,6 +149,87 @@ def main():
     #that reconnects must come back with a working cursor
     db.connect()
     check('reconnecting gives a usable cursor', db.get_vm_info('i-100')['node_hostname'], 'node02')
+
+    readings(db)
+
+
+def readings(db):
+    '''
+    the history half: what a notification leaves behind, and the queries drawn
+    from it. The in memory fakes cannot catch a wrong GROUP BY or a datetime
+    that does not survive the column, so those are checked here
+    '''
+    from history import History
+
+    db.cur.execute("DELETE FROM vmmonitor_reading")
+    db.db.commit()
+    history = History(db)
+
+    #two rounds from one vm, five minutes apart, as the agent would send them
+    first = datetime.datetime(2026, 8, 6, 12, 0, 0)
+    second = first + datetime.timedelta(minutes=5)
+    history.record('i-100', {'memory':{'used':512, 'total':1024},
+                             'loadavg':{'1':0.5, '5':0.4, '10':0.3}}, when=first)
+    kept = history.record('i-100', {'memory':{'used':768, 'total':1024},
+                                    'loadavg':{'1':2.5, '5':0.4, '10':0.3}}, when=second)
+    check('a notification is stored one row per field', kept, 5)
+
+    db.cur.execute("SELECT COUNT(*) AS n FROM vmmonitor_reading")
+    check('both rounds are on disk', db.cur.fetchone()['n'], 10)
+
+    #the greatest-per-group query: every field at its newest value
+    latest = history.latest('i-100')
+    check('the last value of every field comes back',
+          latest['memory'], {'used':'768', 'total':'1024'})
+    check('every metric is grouped under its name',
+          sorted(latest.keys()), ['loadavg', 'memory'])
+
+    #a datetime has to survive the column, or every window query is wrong
+    check('the time of a reading round trips', history.last_seen('i-100'), second)
+
+    #the series a graph is drawn from, oldest first
+    check('a series comes back in order',
+          [value for when, value in history.series('i-100', 'memory', 'used')],
+          ['512', '768'])
+    check('a float survives the trip',
+          history.numeric_series('i-100', 'loadavg', '1')[1][1], 2.5)
+    check('a spike between readings is kept',
+          history.peak('i-100', 'loadavg', '1'), 2.5)
+
+    #the window clause, which the fakes only approximate
+    check('a window leaves out what came before it',
+          [value for when, value in
+           history.series('i-100', 'memory', 'used', since=second)],
+          ['768'])
+    check('a limit counts back from the newest reading',
+          [value for when, value in
+           history.series('i-100', 'memory', 'used', limit=1)],
+          ['768'])
+
+    #one vm must not see another's readings
+    history.record('i-101', {'memory':{'used':1, 'total':2}}, when=second)
+    check('one vm does not see another', history.latest('i-101')['memory']['used'], '1')
+    check('vms with readings are listed',
+          sorted(history.instance_ids()), ['i-100', 'i-101'])
+
+    #a value wider than the column is cut rather than refused by the server
+    history.record('i-101', {'availability':{'uptime':'x'*400}}, when=second)
+    check('an over wide value is stored cut',
+          len(history.latest('i-101')['availability']['uptime']), 255)
+
+    #retention
+    history.record('i-100', {'memory':{'used':1, 'total':2}},
+                   when=second - datetime.timedelta(days=40))
+    discarded = history.purge(days=30, now=second)
+    check('readings past the window are discarded', discarded, 2)
+    check('readings inside the window are kept',
+          [value for when, value in history.series('i-100', 'memory', 'used')],
+          ['512', '768'])
+
+    history.forget('i-100')
+    check('forgetting a vm drops its readings', history.latest('i-100'), {})
+    check('forgetting one vm leaves the others alone',
+          history.latest('i-101')['memory']['used'], '1')
 
 
 if __name__ == '__main__':

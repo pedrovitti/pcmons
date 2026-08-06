@@ -37,12 +37,14 @@ Repository layout
                       API, keeps the vmmonitor_vm table in sync, talks to the nodes
       node/           XML-RPC plugin that runs on each node host and reports the
                       VMs currently running there
-      Notification_Server.py  receives the agent notifications and hands them to the
-                      configured interface
+      cluster/history.py  keeps the readings each notification carried, and answers
+                      questions about them (last value, one value over time, silence)
+      Notification_Server.py  receives the agent notifications, keeps the readings and
+                      hands them to the configured interface
     interface/nagios/ turns monitoring data into Nagios passive checks and generates
                       the Nagios configuration for the monitored VMs
     third-parties/    Eucalyptus add_key.pl replacement
-    vmmonitor_vm.sql  schema for the VM inventory table
+    vmmonitor_vm.sql  schema for the VM inventory and the kept readings
 
 Configuration lives in `running_vms/cluster/cluster_config.py`,
 `running_vms/node/node_config.py` and `booting_vms/settings.py`.
@@ -165,7 +167,12 @@ has a history of — and checks each probe against a fixture whose result is kno
 so the parsing is verified rather than just the absence of a crash. `dbtest` starts MariaDB
 with `vmmonitor_vm.sql` applied and runs the cluster controller's insert/read/update/terminate
 cycle, including a quoted value and an injection payload to confirm the queries bind their
-parameters.
+parameters, then the readings a notification leaves behind and the queries drawn from them.
+
+The schema is applied when the database container is first created, so a change to
+`vmmonitor_vm.sql` reaches an existing one only after it is thrown away:
+
+    $ docker compose -f docker/docker-compose.yml down -v
 
 `virsh` in the image is a stub replaying recorded output, since libvirt cannot run in a
 container. Everything else is the real binary.
