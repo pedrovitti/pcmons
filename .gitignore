@@ -8,6 +8,7 @@ __pycache__/
 # Editors / OS
 *.swp
 .DS_Store
+.idea/
 
 # Generated VM agent bundle (build with booting_vms/build_monitoring_bundle.sh)
 booting_vms/monitoring.tar
