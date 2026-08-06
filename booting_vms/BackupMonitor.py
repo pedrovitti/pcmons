@@ -4,16 +4,26 @@ class BackupMonitor:
     '''
     Class for Backup Monitoring based on rsync
     '''
-    def __init__(self):
+    #defined for each rsync backup (--log-file)
+    LOG_PATH = "/var/log/rsync.log"
+
+    def __init__(self, log_path=None):
         self.backup = {'last_performed':""}
-	
-    def get_backup_info(self):	
-        #defined for each rsync backup (--log-file)
-        log_path = "/var/log/rsync.log" 
+        self.log_path = log_path or self.LOG_PATH
+
+    def get_backup_info(self):
+        log_path = self.log_path
         
         f = open(log_path, 'r')
-        lines = f.readlines()
-		
+        try:
+            lines = f.readlines()
+        finally:
+            f.close()
+
+        #a log that exists but holds no run yet is not a failure to report
+        if len(lines) == 0:
+            return self.backup
+
         last_line = lines[-1]
         last_backup = last_line[0:19] #date and time in the form YYYY/MM/DD HH:MM:SS
 
