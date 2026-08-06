@@ -72,29 +72,47 @@ class VM_Monitoring_Cluster_Plugin:
 
     def grepNodes(self, infra=cluster_config.INFRA, file=cluster_config.PATH_TO_EUCALYPTUS_CONFIG_FILE, pattern="NODES"):
         '''
-        provides the list eucalyptus nodes
+        the nodes of this cloud, as addresses
         '''
         if infra == 'eucalyptus':
-            fileConf = open(file,'r')
-            Nodes = ''
+            return self.eucalyptus_nodes(file, pattern)
+        elif infra == 'opennebula':
+            return self.opennebula_nodes()
+
+        logging.error('no node discovery for %s'%infra)
+        return []
+
+    def eucalyptus_nodes(self, file, pattern="NODES"):
+        #the eucalyptus config carries them on one line: NODES="10.0.0.2 10.0.0.3"
+        fileConf = open(file,'r')
+        try:
             for line in fileConf:
                 if pattern in line:
-                    Nodes = Nodes + line
-                    Nodes = Nodes.split('\"')
-                    NC = Nodes[1].split()
-                    return NC
+                    quoted = line.split('\"')
+                    if len(quoted) > 1:
+                        return quoted[1].split()
+        finally:
+            fileConf.close()
 
-        elif infra == 'opennebula':
-            command = cluster_config.PATH_TO_OPENNEBULA + "/bin/onehost list | grep '  on' | awk {' print $2 '}"
-            get_names = commands.getoutput(command).split("\n")
-            Nodes = []
-            for i in range(len(get_names)):
-                addr = socket.gethostbyname(get_names[i])
-                Nodes.append(addr)
-            return Nodes
+        #a config with no NODES line is a cloud with no nodes, not a crash:
+        #this used to fall off the end and return None, and the caller stores
+        #it and iterates it in the next breath
+        logging.error('no %s line in %s'%(pattern, file))
+        return []
 
-        else:
-            return 'not implemented yet'
+    def opennebula_nodes(self):
+        command = cluster_config.PATH_TO_OPENNEBULA + "/bin/onehost list | grep '  on' | awk {' print $2 '}"
+        nodes = []
+        for name in commands.getoutput(command).split("\n"):
+            name = name.strip()
+            if not name:
+                continue
+            try:
+                nodes.append(socket.gethostbyname(name))
+            except socket.error, error:
+                #one node that does not resolve must not stop the controller
+                logging.error('cannot resolve node %s: %s'%(name, error))
+        return nodes
 
 
     def get_vm_list_running_on_node(self, node):
