@@ -1,9 +1,5 @@
 #!/bin/sh
-#Author : Shirlei Chaves
-#E-mail : shirlei@gmail.com
-#Date: 2010-07-20
-#Version : 1.0
-#Description : This script sets up monitoring files
+#This script sets up monitoring files
 
 touch /root/install_log.txt
 DO_INSTALL=1

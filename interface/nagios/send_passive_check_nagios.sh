@@ -1,7 +1,5 @@
 #!/bin/bash
-# Author: rafael.uriarte@gmail.com
-# Version: 1.0
-# Description: writes command msgs to the nagios pipe
+# Writes command msgs to the nagios pipe
 
 usage()
 {

@@ -1,7 +1,5 @@
 '''
-Author: shirlei@gmail.com
-Description: receives notifications from the vms and passes to the configured interfaces
-Version: 1.0
+Receives notifications from the vms and passes them to the configured interfaces.
 '''
 import commands, logging, sys
 from SimpleXMLRPCServer import SimpleXMLRPCServer
