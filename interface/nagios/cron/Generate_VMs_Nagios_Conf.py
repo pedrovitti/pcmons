@@ -8,6 +8,7 @@ import sys
 sys.path.append('/opt/pcmons/')
 from running_vms.cluster.Mysql_Db_Connector import Db_Connector
 import running_vms.cluster.cluster_config
+from interface.nagios import services
 #not writtinf for now, doing testsssss
 class Generate_VMs_Nagios_Conf:
 
@@ -118,40 +119,25 @@ class Generate_VMs_Nagios_Conf:
         return service_conf
 
     def define_service_passive(self, host):
-        service_conf = "define service {\n \
+        #one per entry in interface/nagios/services.py, so a metric the agents
+        #report always has somewhere to land
+        conf = ''
+        for service in services.service_names():
+            conf = conf + "define service {\n \
                             max_check_attempts	4 \n \
                             host_name		%s\n \
-                            service_description	RAM\n \
+                            service_description	%s\n \
                             contact_groups          admins\n \
                             notification_options    w,u,c,r,n\n \
                             notification_interval   60\n \
                             notification_period     24x7\n \
                             check_command           check_dummy\n \
-                            active_checks_enabled 0\n   passive_checks_enabled 1\n \
-                        }\n"%(host)
-        service_conf = service_conf+"define service {\n \
-                            max_check_attempts	4 \n \
-                            host_name		%s\n \
-                            service_description	Cpu_Load\n \
-                            contact_groups          admins\n \
-                            notification_options    w,u,c,r,n\n \
-                            notification_interval   60\n \
-                            notification_period     24x7\n \
-                            check_command           check_dummy!2\n \
                             active_checks_enabled 0\n \
-                            passive_checks_enabled 1\n  }\n"%(host)
-        service_conf = service_conf+"define service {\n \
-                            max_check_attempts	4 \n \
-                            host_name		%s\n \
-                            service_description	HTTP_Connections\n \
-                            contact_groups          admins\n \
-                            notification_options    w,u,c,r,n\n \
-                            notification_interval   60\n \
-                            notification_period     24x7\n \
-                            check_command           check_dummy!2\n \
-                            active_checks_enabled 0\n \
-                            passive_checks_enabled 1\n  }\n"%(host)
-        service_conf = service_conf+"define service {\n \
+                            passive_checks_enabled 1\n \
+                        }\n"%(host, service)
+
+        #ssh reachability is checked by nagios itself, not reported by the vm
+        conf = conf + "define service {\n \
                             max_check_attempts	4 \n \
                             host_name		%s\n \
                             service_description	SSH\n \
@@ -162,7 +148,7 @@ class Generate_VMs_Nagios_Conf:
                             check_command           check_ssh!\n \
                             active_checks_enabled 1\n \
                             }\n"%(host)
-        return service_conf
+        return conf
 
     def define_service_group(self, ids):
         service_group = "define servicegroup {\n \
