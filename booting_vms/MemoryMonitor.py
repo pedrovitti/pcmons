@@ -4,8 +4,11 @@ class MemoryMonitor:
     '''
         Class for Memory Usage Monitoring
     '''
-    def __init__(self):
+    MEMINFO_PATH = '/proc/meminfo'
+
+    def __init__(self, meminfo_path=None):
         self.memory = {'used':0,'free':0,'cache':0,'total':0}
+        self.meminfo_path = meminfo_path or self.MEMINFO_PATH
 
     def get_memory_usage(self):
         cmd = 'free -m | grep ^-'
@@ -16,7 +19,7 @@ class MemoryMonitor:
 
     def get_meminfo(self):
         memory = {'used':0,'free':0,'cache':0,'total':0}
-        lines = self.parseSplitFile('/proc/meminfo')
+        lines = self.parseSplitFile(self.meminfo_path)
         for line in lines:
             if re.match('MemFree',line[0]):
                 memory['free'] = int(line[1])
