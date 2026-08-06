@@ -2,13 +2,16 @@ class EncryptionMonitor:
     '''
     Class for Encryption Monitoring based on dm-crypt
     '''
-    def __init__(self):
+    #Ubuntu default
+    CRYPTTAB_PATH = "/etc/crypttab"
+
+    def __init__(self, crypttab_path=None):
         self.encryption = {'is_encrypted':"", 'cipher':""}
+        self.crypttab_path = crypttab_path or self.CRYPTTAB_PATH
 
     def get_encryption_info(self):
 
-        #Ubuntu default
-        crypttab_path = "/etc/crypttab"
+        crypttab_path = self.crypttab_path
 
         is_encrypted = "no"
         cipher = "-"
