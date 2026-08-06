@@ -149,8 +149,16 @@ the repository ships a container that stands in for both. It pins Python 2.7.18,
 read (`/var/log/auth.log`, `/etc/crypttab`, `/var/log/tiger/`, ...) so the code runs
 unmodified.
 
-    $ docker compose -f docker/docker-compose.yml run --rm smoke    # every probe, no database
+    $ docker compose -f docker/docker-compose.yml run --rm tests     # unit tests
+    $ docker compose -f docker/docker-compose.yml run --rm smoke     # every probe, no database
     $ docker compose -f docker/docker-compose.yml run --rm dbtest    # Db_Connector against MariaDB
+
+`tests/` holds the unit tests. Each one builds its own input in a temporary directory and
+asserts on the parsed result, so it needs neither the fixtures nor a database. Add a
+`tests/test_*.py` file and the runner picks it up; pass a name to run one on its own:
+
+    $ docker compose -f docker/docker-compose.yml run --rm tests \
+          python tests/run_tests.py test_ssh_access_monitor
 
 `smoke` imports each module — which catches the syntax and indentation errors this codebase
 has a history of — and checks each probe against a fixture whose result is known in advance,
