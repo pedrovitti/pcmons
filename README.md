@@ -52,7 +52,15 @@ Repository layout
     vmmonitor_vm.sql  schema for the VM inventory and the kept readings
 
 Configuration lives in `running_vms/cluster/cluster_config.py`,
-`running_vms/node/node_config.py` and `booting_vms/settings.py`.
+`running_vms/node/node_config.py` and `booting_vms/settings.py`. They are plain Python,
+so nothing stops a port being quoted or an interface being spelt wrong. `config_check.py`
+reads whichever of the three this machine has and says what is wrong with them before
+anything depends on it:
+
+    $ python config_check.py
+
+It connects to nothing. Errors mean something will not work; warnings mean something is
+probably not what was meant, such as a path belonging to a host this is not.
 
 
 Prerequisites
