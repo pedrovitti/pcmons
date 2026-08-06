@@ -52,7 +52,7 @@ class NagiosPassiveServer:
         self.register_passive_check(hostname, 'Cpu_Load', 0, '"'+output+'"')
         
         #HTTP Connections
-        self.register_passive_check(hostname, 'HTTP_Connections', 0, '"'+data['http']['nconexoes']+'"')
+        self.register_passive_check(hostname, 'HTTP_Connections', 0, '"%s"'%data['http']['connections'])
 
         return True
 
