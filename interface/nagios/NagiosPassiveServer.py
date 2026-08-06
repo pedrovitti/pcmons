@@ -11,10 +11,10 @@ from running_vms.cluster.Mysql_Db_Connector import Db_Connector
 import running_vms.cluster.cluster_config as cluster_config
 
 class NagiosPassiveServer:
-    def __init__(self):
+    def __init__(self, db=None):
         try:
             logging.basicConfig(level=logging.DEBUG, format = '%(asctime)s %(name)-12s %(levelname)-8s %(message)s', datefmt='%m-%d %H:%M', filename=cluster_config.PATH_TO_LOG_FILE)
-            self.db = Db_Connector()
+            self.db = db or Db_Connector()
         except:
             e = sys.exc_info()[1]
             print 'NagiosPassiveServer error :', e
@@ -31,30 +31,42 @@ class NagiosPassiveServer:
 
 
     def process_notification(self,data, ipAddress):
-        print 'data : ' , data
+        logging.debug('notification from %s: %s'%(ipAddress, data))
         instance_id = self.db.get_id_by_ip(ipAddress)
         vm = self.db.get_vm_info(instance_id['instance_id'])
         hostname = "%s_%s_%s"%(vm['user'],vm['instance_id'],vm['node_hostname'])
 
-        memPercentage = int( 100*(data['memory']['used'])/float(data['memory']['total']))
-        self.register_passive_check(hostname, 'RAM', 0, '"'+str(memPercentage) + ';'+str((data['memory']['used']/1024))+'/'+str((data['memory']['total']/1024))+'"')
+        #the agent leaves out any probe that failed, so a metric can be missing
+        #from an otherwise good notification. Register what did arrive.
+        if 'memory' in data:
+            self.register_memory_check(hostname, data['memory'])
 
-        #CPU
-        if data['loadavg']['1'] >= 3.0:
-            output = "CRITICAL - load average: %.2f, %.2f, %.2f" % (data['loadavg']['1'],data['loadavg']['5'],data['loadavg']['10'])
-        elif data['loadavg']['1'] >= 1.5:
-            output =  "WARNING - load average: %.2f, %.2f, %.2f" % (data['loadavg']['1'],data['loadavg']['5'],data['loadavg']['10'])
-        else:
-            
-            print 'data: ', data['loadavg']['1']
-            output = "OK - load average: %.2f, %.2f, %.2f" % (data['loadavg']['1'],data['loadavg']['5'],data['loadavg']['10'])
+        if 'loadavg' in data:
+            self.register_load_check(hostname, data['loadavg'])
 
-        self.register_passive_check(hostname, 'Cpu_Load', 0, '"'+output+'"')
-        
-        #HTTP Connections
-        self.register_passive_check(hostname, 'HTTP_Connections', 0, '"%s"'%data['http']['connections'])
+        if 'http' in data:
+            self.register_passive_check(hostname, 'HTTP_Connections', 0, '"%s"'%data['http']['connections'])
 
         return True
+
+    def register_memory_check(self, hostname, memory):
+        total = memory['total']
+        if total <= 0:
+            logging.error('memory reading has no total: %s'%memory)
+            return
+        percentage = int(100*memory['used']/float(total))
+        self.register_passive_check(hostname, 'RAM', 0,
+            '"%s;%s/%s"'%(percentage, memory['used']/1024, total/1024))
+
+    def register_load_check(self, hostname, loadavg):
+        if loadavg['1'] >= 3.0:
+            state = "CRITICAL"
+        elif loadavg['1'] >= 1.5:
+            state = "WARNING"
+        else:
+            state = "OK"
+        output = "%s - load average: %.2f, %.2f, %.2f"%(state, loadavg['1'], loadavg['5'], loadavg['10'])
+        self.register_passive_check(hostname, 'Cpu_Load', 0, '"'+output+'"')
 
 
 
