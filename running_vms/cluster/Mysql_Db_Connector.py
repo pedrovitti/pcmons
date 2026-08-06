@@ -84,6 +84,17 @@ class Db_Connector:
             return None
         return vms[0]
 
+    def get_vm_by_ip(self, ip):
+        '''
+        the running vm reporting from this address, or None. Every interface
+        starts here: a notification carries no identity beyond the address it
+        arrived from
+        '''
+        found = self.get_id_by_ip(ip)
+        if found is None:
+            return None
+        return self.get_vm_info(found['instance_id'])
+
     def set_status_terminated(self,instance_id):
         sql = "UPDATE " + cluster_config.VM_TABLE + " set state='terminated' WHERE instance_id=%s"
         result = self.cur.execute(sql, (instance_id,))

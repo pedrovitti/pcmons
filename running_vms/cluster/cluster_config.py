@@ -79,6 +79,17 @@ LISTEN_IP = os.environ.get('PCMONS_LISTEN_IP', '150.162.63.32')
 #Port where this client will listen to requests
 LISTEN_PORT = int(os.environ.get('PCMONS_LISTEN_PORT', 60001))
 
+#Configurations used by the mail interface
+#Where the alerts come from
+MAIL_FROM = 'pcmons@localhost'
+#Who hears about them. Left empty, the ADMINS above are used
+MAIL_TO = ()
+SMTP_HOST = 'localhost'
+SMTP_PORT = 25
+#How long a vm may stay in the same bad state before it is reported again.
+#0 reports each state once, until it changes
+MAIL_REPEAT_MINUTES = 60
+
 #Interfaces every notification is handed to, in order. A cluster can report
 #into more than one at a time; each is given the readings whole
 INTERFACES = ('nagios',)
