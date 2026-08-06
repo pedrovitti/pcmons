@@ -115,11 +115,9 @@ def probe_vulnerability():
 
 
 def node_plugin_listing():
-    import types
     sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), os.pardir, 'running_vms', 'node'))
     import VM_Monitoring_Node_Plugin as npl
-    #old-style class, and __init__ would start a blocking XML-RPC server
-    plugin = types.InstanceType(npl.VM_Monitoring_Node_Plugin)
+    plugin = npl.VM_Monitoring_Node_Plugin()
     vms = plugin.list_running_vms(lambda d: d.replace('one', 'i'))
     report('node: domains parsed from virsh', [v['instance_id'] for v in vms])
     check('node: both running domains found', len(vms), 2)
