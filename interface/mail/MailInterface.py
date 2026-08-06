@@ -1,22 +1,20 @@
 '''
-    Author: shirlei@gmail.com
-    Description: mails the administrators when a vm reports something wrong
-    Version: 1.0
+Mails the administrators when a vm reports something wrong.
 
-    The second interface, and the reason the readings are judged in one place
-    rather than inside the Nagios one: what counts as a problem is a property
-    of the reading, and both interfaces have to agree on it or an operator
-    gets mail about a vm whose dashboard is green.
+The second interface, and the reason the readings are judged in one place
+rather than inside the Nagios one: what counts as a problem is a property
+of the reading, and both interfaces have to agree on it or an operator
+gets mail about a vm whose dashboard is green.
 
-    Nagios answers "what is the state of everything"; this answers "something
-    changed and you were not looking". So it sends nothing while a vm is
-    healthy, sends when a metric turns bad, sends again when it recovers, and
-    otherwise stays quiet: an alert that arrives every five minutes for a week
-    is one nobody reads.
+Nagios answers "what is the state of everything"; this answers "something
+changed and you were not looking". So it sends nothing while a vm is
+healthy, sends when a metric turns bad, sends again when it recovers, and
+otherwise stays quiet: an alert that arrives every five minutes for a week
+is one nobody reads.
 
-    The package is called mail rather than email because a package named email
-    inside this one would shadow the standard library module of that name for
-    everything importing it.
+The package is called mail rather than email because a package named email
+inside this one would shadow the standard library module of that name for
+everything importing it.
 '''
 import datetime, logging, smtplib, sys
 sys.path.append('/opt/pcmons/')

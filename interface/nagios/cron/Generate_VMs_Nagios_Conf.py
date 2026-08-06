@@ -1,7 +1,5 @@
 '''
-    Authors: shirlei@gmail.com/rafael.uriarte@gmail.com
-    Description: Generates nagios config file for monitored VMs
-    Version: 1.0
+Generates the nagios config file for the monitored vms.
 '''
 import hashlib, logging, os, shutil, time, commands, datetime
 import sys
