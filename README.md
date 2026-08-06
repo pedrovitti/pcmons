@@ -48,6 +48,7 @@ Repository layout
       nagios/         turns monitoring data into Nagios passive checks and generates
                       the Nagios configuration for the monitored VMs
       mail/           mails the administrators when a metric turns bad or recovers
+    pcmonsctl.py      asks the cluster what it knows, from a terminal
     third-parties/    Eucalyptus add_key.pl replacement
     vmmonitor_vm.sql  schema for the VM inventory and the kept readings
 
@@ -61,6 +62,23 @@ anything depends on it:
 
 It connects to nothing. Errors mean something will not work; warnings mean something is
 probably not what was meant, such as a path belonging to a host this is not.
+
+
+Asking the cluster what it knows
+--------
+
+Everything the cluster records is readable through Nagios or by opening the database by
+hand. `pcmonsctl.py` answers the questions somebody asks while something is wrong, which
+is the worst time to be writing SQL:
+
+    $ python pcmonsctl.py vms                       # every vm, and whether it is still reporting
+    $ python pcmonsctl.py show i-42                 # the last reading of every metric
+    $ python pcmonsctl.py history i-42 memory used  # one value over time, with the average and peak
+    $ python pcmonsctl.py silent [minutes]          # vms that have stopped reporting
+    $ python pcmonsctl.py forget i-42               # drop the readings kept for a vm
+
+It reads; only `forget` writes. `silent` exits non-zero when a VM has gone quiet, so it
+can be run from cron.
 
 
 Prerequisites
