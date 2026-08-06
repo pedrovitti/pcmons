@@ -139,6 +139,30 @@ regenerate it from the current sources before building an image:
     $ ./booting_vms/build_monitoring_bundle.sh
 
 
+Testing
+--------
+
+
+pcmons targets Python 2.7 and a private cloud, neither of which is easy to come by now, so
+the repository ships a container that stands in for both. It pins Python 2.7.18, installs
+`mysqlclient` and `boto` 2, and lays fixture logs down at the absolute paths the probes
+read (`/var/log/auth.log`, `/etc/crypttab`, `/var/log/tiger/`, ...) so the code runs
+unmodified.
+
+    $ docker compose -f docker/docker-compose.yml run --rm smoke    # every probe, no database
+    $ docker compose -f docker/docker-compose.yml run --rm dbtest    # Db_Connector against MariaDB
+
+`smoke` imports each module — which catches the syntax and indentation errors this codebase
+has a history of — and checks each probe against a fixture whose result is known in advance,
+so the parsing is verified rather than just the absence of a crash. `dbtest` starts MariaDB
+with `vmmonitor_vm.sql` applied and runs the cluster controller's insert/read/update/terminate
+cycle, including a quoted value and an injection payload to confirm the queries bind their
+parameters.
+
+`virsh` in the image is a stub replaying recorded output, since libvirt cannot run in a
+container. Everything else is the real binary.
+
+
 Configuration
 --------
 
