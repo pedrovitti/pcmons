@@ -1,10 +1,8 @@
-#mysqlclient is the maintained MySQLdb: same module name and the same
-#cursor(cursorclass=...) signature Mysql_Db_Connector.py calls, so the shipped
-#code runs unmodified. PyMySQL was tried first and rejected -- its cursor()
-#takes no cursorclass keyword, so the test would not have exercised the real
-#call. MySQL-python 1.2.5 is the original but no longer compiles against
-#current MariaDB headers.
-mysqlclient==1.4.6
+#PyMySQL is a pure python implementation of the MySQLdb API, so the image needs
+#no compiler and no client headers. Mysql_Db_Connector falls back to it when
+#MySQLdb is absent; deployments that already have python-mysqldb keep using it.
+#0.10.x is the last series supporting python 2.
+PyMySQL==0.10.1
 #boto 2 is what VM_Monitoring_Cluster_Plugin.py targets; it is the last release
 #and still supports python 2.
 boto==2.49.0
