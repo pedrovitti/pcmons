@@ -150,14 +150,6 @@ class Generate_VMs_Nagios_Conf:
                             }\n"%(host)
         return conf
 
-    def define_service_group(self, ids):
-        service_group = "define servicegroup {\n \
-                            servicegroup_name	Virtual Machines\n \
-                            alias	vms\n \
-                            members	%s\n \
-                        }\n"%ids
-        return service_group
-
     def define_hostgroup(self, ids, nodes_groups):
         nodes = []
         #Create host groups for all vms
