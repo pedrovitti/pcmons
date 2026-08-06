@@ -11,10 +11,14 @@ import running_vms.cluster.cluster_config
 #not writtinf for now, doing testsssss
 class Generate_VMs_Nagios_Conf:
 
-    def __init__(self):
-        self.db = Db_Connector()
-        now = datetime.datetime.now()
-        self.create_nagios_conf_running_vms();
+    def __init__(self, db=None):
+        self.db = db or Db_Connector()
+
+    def run(self):
+        '''
+        regenerate the configuration and hand it to nagios if it changed
+        '''
+        self.create_nagios_conf_running_vms()
         self.reload_nagios_if_necessary()
 
     def reload_nagios_if_necessary(self):
@@ -39,50 +43,47 @@ class Generate_VMs_Nagios_Conf:
 
     def create_nagios_conf_running_vms(self):
         vms = self.db.get_info_for_monitoring_running_Vms()
-        vms_str = ''
         try:
             fh = open(running_vms.cluster.cluster_config.NAGIOS_TEMP_CONF,'w')
-            nodes_groups = []
-            hostnames = []
-            for vm in vms:
-                #Check if the machine has a valide ip address, if not , it's not possible to monitorate
-                if vm['public_dns_name'] != '0.0.0.0':
-                    hostname = "%s_%s_%s"%(vm['user'],vm['instance_id'],vm['node_hostname'])
-                    hostnames.append(hostname)
-                    alias = "%s/%s(%s-%s)"%(vm['user'],vm['instance_id'],vm['node_hostname'],vm['node_ip'])
-                    #Verify if there's a node where the vm runs associate, if yes add dependence
-                    if vm['node_ip'] != '':
-                        conf = "define host {\n \
-                                    use linux-server     \n \
-                                    address                %s\n \
-                                    host_name               %s\n \
-                                    alias                   %s\n \
-                                }\n" % (vm['public_dns_name'],hostname,alias)
-                    else:
-                        conf = "define host {\n \
-                                    use linux-server     \n \
-                                    address                %s\n \
-                                    host_name               %s\n \
-                                    alias                   %s\n \
-                                }\n" % (vm['public_dns_name'],hostname,alias)
-
-                    service_conf = self.define_service(hostname,'PING','check_ping!100.0,20%!500.0,60%')
-                    service_conf_passive = self.define_service_passive(hostname)
-                    fh.write(conf)
-                    fh.write(service_conf)
-                    fh.write(service_conf_passive)
-                    vms_str = vms_str + "%s, "%hostname
-                    vm_group = [ hostname,vm['node_ip'] ]
-                    nodes_groups.append(vm_group)
-
-            service_group = self.define_service_group(vms_str)
-            hostgroup = self.define_hostgroup(vms_str,nodes_groups)
+            try:
+                fh.write(self.build_conf(vms))
+            finally:
+                fh.close()
             self.remove_old_conf()
-    #        fh.write(service_group)
-            fh.write(hostgroup)
-            fh.close()
         except IOError as (errno, strerror):
             print "I/O error ({0}): {1}".format(errno,strerror)
+
+    def build_conf(self, vms):
+        '''
+        the whole configuration for the running vms, as text
+        '''
+        conf = ''
+        vms_str = ''
+        nodes_groups = []
+        for vm in vms:
+            #a vm without a real address cannot be monitored
+            if vm['public_dns_name'] == '0.0.0.0':
+                continue
+
+            hostname = "%s_%s_%s"%(vm['user'],vm['instance_id'],vm['node_hostname'])
+            alias = "%s/%s(%s-%s)"%(vm['user'],vm['instance_id'],vm['node_hostname'],vm['node_ip'])
+
+            conf = conf + self.define_host(vm['public_dns_name'], hostname, alias)
+            conf = conf + self.define_service(hostname,'PING','check_ping!100.0,20%!500.0,60%')
+            conf = conf + self.define_service_passive(hostname)
+
+            vms_str = vms_str + "%s, "%hostname
+            nodes_groups.append([hostname, vm['node_ip']])
+
+        return conf + self.define_hostgroup(vms_str, nodes_groups)
+
+    def define_host(self, address, hostname, alias):
+        return "define host {\n \
+                                    use linux-server     \n \
+                                    address                %s\n \
+                                    host_name               %s\n \
+                                    alias                   %s\n \
+                                }\n" % (address, hostname, alias)
 
     def remove_old_conf(self):
         if running_vms.cluster.cluster_config.USING_NAGIOSGRAPHER:
@@ -95,7 +96,9 @@ class Generate_VMs_Nagios_Conf:
             for file in dirList:
                 for terminated_vm in terminated_vms:
                     terminated_vm_id = terminated_vm['instance_id'].replace('-','_')
-                    if terminated_vm_id in file:
+                    #delimited, or terminating i-1 takes i-10's graphs with it:
+                    #the files are named user_instanceid_node-Service.ncfg
+                    if '_%s_'%terminated_vm_id in file:
                         sure_to_remove.append(file)
             for file_to_remove in sure_to_remove:
                 print "Removing File: ",(path+'/'+file_to_remove)   
@@ -202,4 +205,5 @@ class Generate_VMs_Nagios_Conf:
 
 if __name__ == "__main__":
     createFile = Generate_VMs_Nagios_Conf()
+    createFile.run()
     sys.exit()
