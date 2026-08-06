@@ -32,8 +32,13 @@ class NagiosPassiveServer:
 
     def process_notification(self,data, ipAddress):
         logging.debug('notification from %s: %s'%(ipAddress, data))
-        instance_id = self.db.get_id_by_ip(ipAddress)
-        vm = self.db.get_vm_info(instance_id['instance_id'])
+        vm = self.vm_at(ipAddress)
+        if vm is None:
+            #an agent still reporting from an address the inventory does not
+            #have as running: nothing to file the readings against
+            logging.error('no running vm at %s; notification dropped'%ipAddress)
+            return False
+
         hostname = "%s_%s_%s"%(vm['user'],vm['instance_id'],vm['node_hostname'])
 
         #the agent leaves out any probe that failed, so a metric can be missing
@@ -48,6 +53,15 @@ class NagiosPassiveServer:
             self.register_passive_check(hostname, 'HTTP_Connections', 0, '"%s"'%data['http']['connections'])
 
         return True
+
+    def vm_at(self, address):
+        '''
+        the running vm reporting from this address, or None
+        '''
+        found = self.db.get_id_by_ip(address)
+        if found is None:
+            return None
+        return self.db.get_vm_info(found['instance_id'])
 
     def register_memory_check(self, hostname, memory):
         total = memory['total']
