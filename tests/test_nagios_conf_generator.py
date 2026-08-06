@@ -21,6 +21,7 @@ import running_vms.cluster.cluster_config as cluster_config
 sys.path.insert(0, os.path.join(ROOT, 'interface', 'nagios', 'cron'))
 
 import Generate_VMs_Nagios_Conf as module
+from interface.nagios import services
 
 
 def vm(instance_id, user='oneadmin', node='node01', node_ip='10.0.0.2',
@@ -70,9 +71,27 @@ class BuildConfTest(unittest.TestCase):
         self.assertIn('check_ping!100.0,20%!500.0,60%', self.conf([vm('i-1')]))
 
     def test_defines_a_passive_service_for_each_reported_metric(self):
+        #every metric the agent collects, not just the three the interface
+        #used to read: a service Nagios does not know about is discarded
         conf = self.conf([vm('i-1')])
-        for service in ('RAM', 'Cpu_Load', 'HTTP_Connections', 'SSH'):
+        for service in services.service_names():
             self.assertIn('service_description\t%s'%service, conf)
+
+    def test_defines_the_security_services(self):
+        conf = self.conf([vm('i-1')])
+        for service in ('Malware', 'Vulnerabilities', 'Encryption', 'Backup',
+                        'Integrity', 'Password_Policy', 'SSH_Attempts', 'Availability'):
+            self.assertIn('service_description\t%s'%service, conf)
+
+    def test_still_checks_ssh_reachability_actively(self):
+        #nagios checks this itself; it is not reported by the vm
+        conf = self.conf([vm('i-1')])
+        self.assertIn('check_ssh!', conf)
+        self.assertIn('active_checks_enabled 1', conf)
+
+    def test_defines_one_service_per_name(self):
+        conf = self.conf([vm('i-1')])
+        self.assertEqual(conf.count('define service {'), len(services.service_names()) + 2)
 
     def test_the_passive_services_do_not_check_actively(self):
         #they are filled in by the agents' notifications; Nagios polling them
