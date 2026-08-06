@@ -96,7 +96,9 @@ class Generate_VMs_Nagios_Conf:
             for file in dirList:
                 for terminated_vm in terminated_vms:
                     terminated_vm_id = terminated_vm['instance_id'].replace('-','_')
-                    if terminated_vm_id in file:
+                    #delimited, or terminating i-1 takes i-10's graphs with it:
+                    #the files are named user_instanceid_node-Service.ncfg
+                    if '_%s_'%terminated_vm_id in file:
                         sure_to_remove.append(file)
             for file_to_remove in sure_to_remove:
                 print "Removing File: ",(path+'/'+file_to_remove)   
