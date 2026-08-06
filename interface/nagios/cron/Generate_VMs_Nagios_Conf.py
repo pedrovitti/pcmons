@@ -3,7 +3,7 @@
     Description: Generates nagios config file for monitored VMs
     Version: 1.0
 '''
-import logging, os, time, commands, datetime
+import hashlib, logging, os, shutil, time, commands, datetime
 import sys
 sys.path.append('/opt/pcmons/')
 from running_vms.cluster.Mysql_Db_Connector import Db_Connector
@@ -23,21 +23,41 @@ class Generate_VMs_Nagios_Conf:
         self.reload_nagios_if_necessary()
 
     def reload_nagios_if_necessary(self):
-        # getting date for logging purposes
-        now = datetime.datetime.now()
-        print now.strftime("%d-%m-%Y %H:%M:%S")
-        if os.path.isfile(running_vms.cluster.cluster_config.VMS_NAGIOS_FILE):
-            md5a = commands.getoutput("md5sum "+running_vms.cluster.cluster_config.NAGIOS_TEMP_CONF+" | awk '{ print $1 }'")
-            md5b = commands.getoutput("md5sum %s | awk ' { print $1 }'"%running_vms.cluster.cluster_config.VMS_NAGIOS_FILE)
-            if md5a != md5b:
-                print 'Moving File'
-                os.system('mv '+running_vms.cluster.cluster_config.NAGIOS_TEMP_CONF + ' %s'%running_vms.cluster.cluster_config.VMS_NAGIOS_FILE)
-                self.reload_nagios()
-            else:
-                print 'no changes'
-        else:
-            os.system('mv '+running_vms.cluster.cluster_config.NAGIOS_TEMP_CONF + ' %s'%running_vms.cluster.cluster_config.VMS_NAGIOS_FILE)
-            self.reload_nagios()
+        '''
+        put the generated configuration in place and reload nagios, unless it
+        is the same as the one already live. True if nagios was reloaded.
+        '''
+        generated = running_vms.cluster.cluster_config.NAGIOS_TEMP_CONF
+        live = running_vms.cluster.cluster_config.VMS_NAGIOS_FILE
+
+        #nothing was generated: reloading would only re-read what is already
+        #there, and there is nothing to move
+        if not os.path.isfile(generated):
+            logging.error('no generated configuration at %s'%generated)
+            return False
+
+        if os.path.isfile(live) and self.checksum(generated) == self.checksum(live):
+            logging.debug('nagios configuration unchanged')
+            return False
+
+        try:
+            shutil.move(generated, live)
+        except (IOError, OSError), error:
+            #reloading now would tell nagios to re-read the old file, and the
+            #run would look like it succeeded
+            logging.error('could not put %s in place: %s'%(generated, error))
+            return False
+
+        logging.debug('nagios configuration changed; reloading')
+        self.reload_nagios()
+        return True
+
+    def checksum(self, path):
+        f = open(path, 'rb')
+        try:
+            return hashlib.md5(f.read()).hexdigest()
+        finally:
+            f.close()
 
     def reload_nagios(self):
         os.system(running_vms.cluster.cluster_config.COMMAND_TO_RELOAD_NAGIOS)
