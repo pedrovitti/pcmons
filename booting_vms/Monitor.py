@@ -30,6 +30,10 @@ class Monitor:
         self.passwordMonitor = PasswordMonitor()
         self.vulnerabilityMonitor = VulnerabilityMonitor()
 
+    def run(self):
+        '''
+        collect and report for as long as the vm is up
+        '''
         while True:
             now = datetime.datetime.now()
             print now.strftime("%d-%m-%Y %H:%M:%S")
@@ -76,3 +80,4 @@ class Monitor:
 
 if __name__ == "__main__":
     monitor = Monitor()
+    monitor.run()
